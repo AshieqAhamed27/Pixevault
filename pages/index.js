@@ -241,7 +241,8 @@ export default function Home({ initialUser = null }) {
         .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:1.25rem;margin-bottom:3rem}
         .pcard{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:all .3s;position:relative}
         .pcard:hover{box-shadow:0 12px 40px rgba(13,13,20,.12);transform:translateY(-3px);border-color:var(--gold)}
-        .pthumb{height:150px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+        .pthumb{height:150px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:#111}
+        .pimage{width:100%;height:100%;object-fit:cover;display:block}
         .pthumb-emoji{font-size:3.2rem;position:relative;z-index:1}
         .pbadge{position:absolute;top:10px;left:10px;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px}
         .pbadge-hot{background:var(--ink);color:var(--gold)}
@@ -284,6 +285,7 @@ export default function Home({ initialUser = null }) {
         .c-body{flex:1;overflow-y:auto;padding:.75rem 1rem}
         .c-item{display:flex;gap:10px;padding:.85rem 0;border-bottom:1px solid var(--border)}
         .c-ico{width:50px;height:50px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+        .c-img{width:50px;height:50px;border-radius:9px;object-fit:cover;display:block;flex-shrink:0;background:#111}
         .c-info{flex:1;min-width:0}
         .c-name{font-weight:500;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
         .c-price{font-weight:700;color:var(--teal);font-size:.9rem}
@@ -320,7 +322,8 @@ export default function Home({ initialUser = null }) {
         .confirm-btn:disabled{opacity:.5;cursor:not-allowed}
         .secure-note{text-align:center;font-size:.72rem;color:var(--muted);margin-top:.6rem}
         .detail-grid{display:grid;grid-template-columns:130px 1fr;gap:16px}
-        .detail-thumb{height:130px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:800;color:var(--ink)}
+        .detail-thumb{height:130px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:800;color:var(--ink);overflow:hidden;background:#111}
+        .detail-image{width:100%;height:100%;object-fit:cover;display:block}
         .detail-copy h2{margin:0 0 7px;font-size:1.35rem}
         .detail-copy p{color:var(--muted);font-size:.88rem;line-height:1.55;margin:0 0 10px}
         .detail-list{margin:10px 0 16px;padding-left:18px;color:var(--text);font-size:.84rem;line-height:1.55}
@@ -450,7 +453,11 @@ export default function Home({ initialUser = null }) {
                         </div>
                       )}
                       <div className="pthumb" style={{ background: bg }}>
-                        <div className="pthumb-emoji">{p.emoji || '📦'}</div>
+                        {p.image ? (
+                          <img className="pimage" src={p.image} alt={`${p.name} product cover`} loading="lazy" />
+                        ) : (
+                          <div className="pthumb-emoji">{p.emoji || 'PK'}</div>
+                        )}
                       </div>
                       <div className="pbody">
                         <div className="pcat">{p.category}</div>
@@ -515,7 +522,11 @@ export default function Home({ initialUser = null }) {
                 <div className="empty-c">Cart is empty — add a product!</div>
               ) : cart.map(i => (
                 <div key={i._id} className="c-item">
-                  <div className="c-ico" style={{ background: colorMap[i.color] || colorMap.teal }}>{i.emoji || '📦'}</div>
+                  {i.image ? (
+                    <img className="c-img" src={i.image} alt="" />
+                  ) : (
+                    <div className="c-ico" style={{ background: colorMap[i.color] || colorMap.teal }}>{i.emoji || 'PK'}</div>
+                  )}
                   <div className="c-info">
                     <div className="c-name">{i.name}</div>
                     <div className="c-price">₹{i.price.toLocaleString('en-IN')}</div>
@@ -594,7 +605,11 @@ export default function Home({ initialUser = null }) {
             <div className="m-body">
               <div className="detail-grid">
                 <div className="detail-thumb" style={{ background: colorMap[selectedProduct.color] || colorMap.teal }}>
-                  {selectedProduct.emoji || 'PK'}
+                  {selectedProduct.image ? (
+                    <img className="detail-image" src={selectedProduct.image} alt={`${selectedProduct.name} product cover`} />
+                  ) : (
+                    selectedProduct.emoji || 'PK'
+                  )}
                 </div>
                 <div className="detail-copy">
                   <div className="pcat">{selectedProduct.category}</div>

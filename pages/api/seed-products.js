@@ -1,6 +1,6 @@
 import { connectDB } from '../../lib/mongoose';
 import { Product } from '../../lib/models';
-import { starterProducts } from '../../lib/starter-products.mjs';
+import { getSeedProducts } from '../../lib/starter-products.mjs';
 
 function isMissingEnv(key) {
   const value = process.env[key];
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     await connectDB();
 
     const products = await Promise.all(
-      starterProducts.map((product) => (
+      getSeedProducts().map((product) => (
         Product.findOneAndUpdate(
           { slug: product.slug },
           { $set: product },

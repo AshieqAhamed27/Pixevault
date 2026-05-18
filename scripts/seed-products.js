@@ -4,7 +4,7 @@
 // seed script, and first paid product stay in sync.
 
 import mongoose from 'mongoose';
-import { starterProducts } from '../lib/starter-products.mjs';
+import { getSeedProducts } from '../lib/starter-products.mjs';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
@@ -23,6 +23,7 @@ const ProductSchema = new mongoose.Schema({
   category: String,
   price: Number,
   comparePrice: Number,
+  image: String,
   emoji: String,
   color: String,
   badge: String,
@@ -38,7 +39,7 @@ const Product = mongoose.models.Product || mongoose.model('Product', ProductSche
 async function seed() {
   await mongoose.connect(MONGODB_URI);
   await Product.deleteMany({});
-  const inserted = await Product.insertMany(starterProducts);
+  const inserted = await Product.insertMany(getSeedProducts());
   console.log(`Seeded ${inserted.length} products`);
   await mongoose.disconnect();
 }
