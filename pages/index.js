@@ -190,6 +190,12 @@ export default function Home() {
         .pcat{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
         .pname{font-size:1rem;font-weight:600;margin-bottom:5px;color:var(--ink);line-height:1.3}
         .pdesc{font-size:.78rem;color:var(--muted);line-height:1.45;margin-bottom:10px}
+        .psolve{background:rgba(26,107,107,.08);border:1px solid rgba(26,107,107,.13);border-radius:8px;padding:8px 9px;margin-bottom:10px}
+        .psolve-k{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);font-weight:700;margin-bottom:3px}
+        .psolve-v{font-size:.74rem;line-height:1.35;color:var(--text)}
+        .pfeatures{display:flex;flex-direction:column;gap:4px;margin:0 0 12px;padding:0;list-style:none}
+        .pfeat{font-size:.72rem;color:var(--muted);line-height:1.35;display:flex;gap:5px}
+        .pfeat::before{content:"";width:5px;height:5px;background:var(--gold);border-radius:50%;margin-top:6px;flex-shrink:0}
         .prating{display:flex;align-items:center;gap:4px;margin-bottom:10px;font-size:.75rem;color:var(--muted)}
         .stars{color:var(--gold);letter-spacing:1px}
         .pfoot{display:flex;align-items:center;justify-content:space-between}
@@ -328,6 +334,19 @@ export default function Home() {
                         <div className="pcat">{p.category}</div>
                         <div className="pname">{p.name}</div>
                         <div className="pdesc">{p.description}</div>
+                        {p.problem && (
+                          <div className="psolve">
+                            <div className="psolve-k">Solves</div>
+                            <div className="psolve-v">{p.problem}</div>
+                          </div>
+                        )}
+                        {Array.isArray(p.features) && p.features.length > 0 && (
+                          <ul className="pfeatures">
+                            {p.features.slice(0, 3).map(feature => (
+                              <li key={feature} className="pfeat">{feature}</li>
+                            ))}
+                          </ul>
+                        )}
                         {p.reviewCount > 0 && (
                           <div className="prating">
                             <span className="stars">{'★'.repeat(Math.floor(p.rating || 0))}</span>

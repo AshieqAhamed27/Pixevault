@@ -128,9 +128,11 @@ This ensures payment is confirmed even if the user closes the browser mid-flow.
 | GET | `/api/products` | List all active products | None |
 | GET | `/api/products?category=course` | Filter by category | None |
 | POST | `/api/products` | Add a product | `x-admin-secret` header |
+| POST | `/api/seed-products` | Seed/update starter products | `x-admin-secret` header |
 | POST | `/api/create-order` | Create Razorpay order | None |
 | POST | `/api/verify-payment` | Verify payment signature | None |
 | POST | `/api/webhook` | Razorpay webhook receiver | HMAC signature |
+| GET | `/api/download` | Download a paid product file | Order download token |
 | GET | `/api/orders` | List paid orders | `x-admin-secret` header |
 
 ---

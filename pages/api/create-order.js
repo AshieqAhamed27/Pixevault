@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import { connectDB } from '../../lib/mongoose';
 import { Order, Product } from '../../lib/models';
@@ -69,6 +70,7 @@ export default async function handler(req, res) {
       const product = findRequestedProduct(dbProducts, item.productId);
       return {
         productId: product._id.toString(),
+        slug: product.slug,
         name: product.name,
         price: product.price,
         downloadUrl: product.downloadUrl,
@@ -80,6 +82,7 @@ export default async function handler(req, res) {
     const gst = Math.round(subtotal * 0.18);
     const total = subtotal + gst;
     const orderId = `PV-${Date.now()}`;
+    const downloadToken = crypto.randomBytes(24).toString('hex');
 
     const razorpay = getRazorpayClient();
     const rzpOrder = await razorpay.orders.create({
@@ -95,14 +98,17 @@ export default async function handler(req, res) {
       customer,
       items: enrichedItems.map((item) => ({
         productId: item.productId,
+        slug: item.slug,
         name: item.name,
         price: item.price,
+        downloadUrl: item.downloadUrl,
         qty: item.qty,
       })),
       subtotal,
       gst,
       total,
       status: 'created',
+      downloadToken,
     });
 
     return res.status(200).json({
