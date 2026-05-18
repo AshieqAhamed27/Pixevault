@@ -129,6 +129,7 @@ This ensures payment is confirmed even if the user closes the browser mid-flow.
 | POST | `/api/auth/login` | Log in customer account | None |
 | POST | `/api/auth/logout` | Log out customer account | Session cookie |
 | GET | `/api/auth/me` | Read current customer account | Session cookie |
+| GET | `/api/account/orders` | Customer order history and downloads | Session cookie |
 | GET | `/api/products` | List all active products | None |
 | GET | `/api/products?category=course` | Filter by category | None |
 | POST | `/api/products` | Add a product | `x-admin-secret` header |

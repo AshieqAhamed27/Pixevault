@@ -334,7 +334,8 @@ export default function Home() {
         <div className="logo"><em>Pixel</em>Vault ✦</div>
         <div className="nav-right">
           <button className={`nav-btn ${tab==='store'?'on':''}`} onClick={() => setTab('store')}>Store</button>
-          <button className={`nav-btn ${tab==='dashboard'?'on':''}`} onClick={() => setTab('dashboard')}>Dashboard</button>
+          {user && <Link className="auth-link" href="/dashboard">My Dashboard</Link>}
+          <button className={`nav-btn ${tab==='dashboard'?'on':''}`} onClick={() => setTab('dashboard')}>Admin</button>
           {user ? (
             <div className="user-pill">
               <span>{user.name}</span>

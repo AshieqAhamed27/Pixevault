@@ -22,7 +22,7 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
-      router.push('/');
+      router.push('/dashboard');
     } catch (err) {
       setError(err.message);
       setLoading(false);
