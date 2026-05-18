@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Script from 'next/script';
+import { readSession } from '../lib/auth';
 
-export default function Home() {
+export default function Home({ initialUser = null }) {
   const [products, setProducts]     = useState([]);
   const [cart, setCart]             = useState([]);
   const [cartOpen, setCartOpen]     = useState(false);
@@ -18,7 +19,7 @@ export default function Home() {
   const [tab, setTab]               = useState('store');
   const [search, setSearch]         = useState('');
   const [sort, setSort]             = useState('featured');
-  const [user, setUser]             = useState(null);
+  const [user, setUser]             = useState(initialUser);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Load products from DB
@@ -728,4 +729,18 @@ function Dashboard() {
       </div>
     </div>
   );
+}
+
+export async function getServerSideProps({ req }) {
+  const session = readSession(req);
+
+  return {
+    props: {
+      initialUser: session ? {
+        id: session.userId,
+        name: session.name,
+        email: session.email,
+      } : null,
+    },
+  };
 }
