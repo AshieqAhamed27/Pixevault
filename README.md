@@ -45,10 +45,10 @@ npm install
 
 ### 4. Configure environment variables
 
-Copy `.env.local` and fill in ALL values:
+Copy `.env.example` to `.env.local` and fill in ALL values:
 
 ```bash
-cp .env.local .env.local   # already exists — just edit it
+cp .env.example .env.local
 ```
 
 Required values:
