@@ -1,6 +1,7 @@
 // pages/index.js
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import Script from 'next/script';
 
 export default function Home() {
@@ -15,6 +16,9 @@ export default function Home() {
   const [success, setSuccess]       = useState(null);
   const [toast, setToast]           = useState('');
   const [tab, setTab]               = useState('store');
+  const [search, setSearch]         = useState('');
+  const [sort, setSort]             = useState('featured');
+  const [user, setUser]             = useState(null);
 
   // Load products from DB
   useEffect(() => {
@@ -23,6 +27,22 @@ export default function Home() {
       .then(data => { setProducts(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
   }, [filter]);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) {
+          setUser(data.user);
+          setCustomer(prev => ({
+            ...prev,
+            name: prev.name || data.user.name || '',
+            email: prev.email || data.user.email || '',
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -45,10 +65,30 @@ export default function Home() {
     });
   };
 
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    showToast('Logged out');
+  };
+
   const cartCount  = cart.reduce((s, i) => s + i.qty, 0);
   const subtotal   = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const gst        = Math.round(subtotal * 0.18);
   const total      = subtotal + gst;
+  const visibleProducts = products
+    .filter((product) => {
+      const term = search.trim().toLowerCase();
+      if (!term) return true;
+      return [product.name, product.description, product.problem, product.outcome, product.audience, product.category]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term));
+    })
+    .sort((a, b) => {
+      if (sort === 'price-low') return a.price - b.price;
+      if (sort === 'price-high') return b.price - a.price;
+      if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
+      return (b.reviewCount || 0) - (a.reviewCount || 0);
+    });
 
   const handlePay = async () => {
     if (!customer.name || !customer.email) {
@@ -155,6 +195,10 @@ export default function Home() {
         .cart-btn{background:var(--gold);color:var(--ink);border:none;padding:9px 18px;border-radius:30px;cursor:pointer;font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:6px;transition:all .2s}
         .cart-btn:hover{background:var(--gold-light)}
         .badge{background:var(--ink);color:var(--gold);font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700}
+        .auth-link{color:#f5f2ec;border:1px solid rgba(255,255,255,.18);padding:8px 12px;border-radius:8px;font-size:.82rem;font-weight:700}
+        .auth-link.primary{background:#f5f2ec;color:var(--ink);border-color:#f5f2ec}
+        .user-pill{display:flex;align-items:center;gap:8px;color:#f5f2ec;font-size:.82rem}
+        .logout-btn{background:none;border:none;color:var(--gold-light);cursor:pointer;font-size:.8rem}
 
         .hero{background:var(--ink);padding:4.5rem 1.5rem 3.5rem;text-align:center;position:relative;overflow:hidden}
         .hero-grid{position:absolute;inset:0;opacity:.04;background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,var(--gold) 40px,var(--gold) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,var(--gold) 40px,var(--gold) 41px)}
@@ -163,6 +207,10 @@ export default function Home() {
         .hero h1 em{font-style:italic;color:var(--gold)}
         .hero p{color:#8888a2;font-size:.95rem;max-width:440px;margin:0 auto 2rem;line-height:1.7}
         .hero-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+        .hero-stats{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:1px;max-width:620px;margin:2.25rem auto 0;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12)}
+        .hero-stat{background:#12121c;padding:14px 12px;text-align:left}
+        .hero-stat strong{display:block;color:#f5f2ec;font-size:1.05rem}
+        .hero-stat span{display:block;color:#8f8fa5;font-size:.72rem;margin-top:3px}
         .btn-gold{background:var(--gold);color:var(--ink);border:none;padding:13px 26px;border-radius:8px;cursor:pointer;font-weight:700;font-size:.9rem;transition:all .2s}
         .btn-gold:hover{background:var(--gold-light);transform:translateY(-1px)}
         .btn-outline{background:none;border:1px solid rgba(255,255,255,.2);color:#f5f2ec;padding:13px 24px;border-radius:8px;cursor:pointer;font-size:.9rem;transition:all .2s}
@@ -171,6 +219,12 @@ export default function Home() {
         .main{max-width:1180px;margin:0 auto;padding:2rem 1.5rem}
         .section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
         .section-lbl{font-size:1.3rem;font-weight:600;color:var(--ink)}
+        .store-tools{display:grid;grid-template-columns:minmax(220px,1fr) 180px;gap:10px;margin-bottom:1rem}
+        .search-input,.sort-select{width:100%;border:1px solid var(--border);background:#fff;color:var(--text);border-radius:8px;padding:11px 12px;font:inherit;outline:none}
+        .search-input:focus,.sort-select:focus{border-color:var(--teal)}
+        .trust-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:-.4rem 0 1.4rem}
+        .trust-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.78rem;color:var(--muted)}
+        .trust-item strong{display:block;color:var(--ink);font-size:.86rem;margin-bottom:2px}
 
         .filters{display:flex;gap:7px;flex-wrap:wrap}
         .filt{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:30px;cursor:pointer;font-size:.82rem;transition:all .2s;text-transform:capitalize}
@@ -196,6 +250,7 @@ export default function Home() {
         .pfeatures{display:flex;flex-direction:column;gap:4px;margin:0 0 12px;padding:0;list-style:none}
         .pfeat{font-size:.72rem;color:var(--muted);line-height:1.35;display:flex;gap:5px}
         .pfeat::before{content:"";width:5px;height:5px;background:var(--gold);border-radius:50%;margin-top:6px;flex-shrink:0}
+        .poutcome{font-size:.72rem;color:var(--teal-dark);background:#edf8f4;border-radius:7px;padding:7px 8px;margin-bottom:10px;line-height:1.35}
         .prating{display:flex;align-items:center;gap:4px;margin-bottom:10px;font-size:.75rem;color:var(--muted)}
         .stars{color:var(--gold);letter-spacing:1px}
         .pfoot{display:flex;align-items:center;justify-content:space-between}
@@ -266,6 +321,12 @@ export default function Home() {
         /* Toast */
         .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--ink);color:#f5f2ec;padding:11px 16px;border-radius:9px;z-index:500;font-size:.82rem;display:flex;align-items:center;gap:7px;border-left:3px solid var(--gold);box-shadow:0 6px 20px rgba(0,0,0,.2);animation:slideUp .3s ease}
         @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+        @media(max-width:760px){
+          nav{height:auto;align-items:flex-start;gap:10px;padding:12px;flex-direction:column}
+          .nav-right{width:100%;flex-wrap:wrap}
+          .hero-stats,.trust-row,.store-tools{grid-template-columns:1fr}
+          .hero{padding:3.5rem 1rem 2.5rem}
+        }
       `}</style>
 
       {/* NAV */}
@@ -274,6 +335,17 @@ export default function Home() {
         <div className="nav-right">
           <button className={`nav-btn ${tab==='store'?'on':''}`} onClick={() => setTab('store')}>Store</button>
           <button className={`nav-btn ${tab==='dashboard'?'on':''}`} onClick={() => setTab('dashboard')}>Dashboard</button>
+          {user ? (
+            <div className="user-pill">
+              <span>{user.name}</span>
+              <button className="logout-btn" onClick={logout}>Logout</button>
+            </div>
+          ) : (
+            <>
+              <Link className="auth-link" href="/login">Login</Link>
+              <Link className="auth-link primary" href="/signup">Sign up</Link>
+            </>
+          )}
           <button className="cart-btn" onClick={() => setCartOpen(true)}>
             🛍 Cart <span className="badge">{cartCount}</span>
           </button>
@@ -287,37 +359,59 @@ export default function Home() {
             <div className="hero-grid" />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div className="hero-tag">✦ Digital Products · Instant Delivery</div>
-              <h1>Premium <em>Digital</em><br />Products for Creators</h1>
-              <p>Courses, templates, tools & licences. Pay once, download forever. Powered by Razorpay.</p>
+              <h1>Digital products that solve <em>business</em><br />problems fast</h1>
+              <p>Premium templates, trackers, scripts, and operating systems for creators, freelancers, founders, and small stores.</p>
               <div className="hero-btns">
                 <button className="btn-gold" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}>Browse Products ↓</button>
-                <button className="btn-outline" onClick={() => setTab('dashboard')}>Seller Dashboard</button>
+                <Link className="btn-outline" href="/signup">Create Account</Link>
+              </div>
+              <div className="hero-stats">
+                <div className="hero-stat"><strong>{products.length || '12'}+</strong><span>ready-to-use products</span></div>
+                <div className="hero-stat"><strong>Instant</strong><span>email delivery after payment</span></div>
+                <div className="hero-stat"><strong>Razorpay</strong><span>UPI, cards, wallets</span></div>
               </div>
             </div>
           </div>
 
           <div className="main" id="shop">
             <div className="section-hd">
-              <div className="section-lbl">All Products</div>
+              <div className="section-lbl">Problem-solving products</div>
               <div className="filters">
                 {categories.map(c => (
                   <button key={c} className={`filt ${filter === c ? 'on' : ''}`} onClick={() => setFilter(c)}>{c}</button>
                 ))}
               </div>
             </div>
+            <div className="store-tools">
+              <input
+                className="search-input"
+                placeholder="Search payments, GST, WhatsApp, support, proposals..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
+                <option value="featured">Featured</option>
+                <option value="rating">Top rated</option>
+                <option value="price-low">Price: low to high</option>
+                <option value="price-high">Price: high to low</option>
+              </select>
+            </div>
+            <div className="trust-row">
+              <div className="trust-item"><strong>Protected delivery</strong>Paid orders get secure download links.</div>
+              <div className="trust-item"><strong>Business-focused</strong>Every product targets a real workflow pain.</div>
+              <div className="trust-item"><strong>Editable assets</strong>Use, copy, and adapt templates immediately.</div>
+              <div className="trust-item"><strong>Customer account</strong>Login speeds up future checkout.</div>
+            </div>
 
             {loading ? (
               <div className="spinner">Loading products…</div>
-            ) : products.length === 0 ? (
+            ) : visibleProducts.length === 0 ? (
               <div className="empty">
-                No products yet. <br /><br />
-                <strong>Add your products via:</strong><br />
-                Run <code>node scripts/seed-products.js</code> after editing the products array,<br />
-                or POST to <code>/api/products</code> with header <code>x-admin-secret</code>.
+                No products match your search.
               </div>
             ) : (
               <div className="pgrid">
-                {products.map(p => {
+                {visibleProducts.map(p => {
                   const disc = p.comparePrice ? Math.round((1 - p.price / p.comparePrice) * 100) : 0;
                   const bg = colorMap[p.color] || colorMap.teal;
                   return (
@@ -340,6 +434,7 @@ export default function Home() {
                             <div className="psolve-v">{p.problem}</div>
                           </div>
                         )}
+                        {p.outcome && <div className="poutcome"><strong>Outcome:</strong> {p.outcome}</div>}
                         {Array.isArray(p.features) && p.features.length > 0 && (
                           <ul className="pfeatures">
                             {p.features.slice(0, 3).map(feature => (
@@ -424,6 +519,11 @@ export default function Home() {
               <button className="m-close" onClick={() => setPayModal(false)}>×</button>
             </div>
             <div className="m-body">
+              {user && (
+                <div className="order-summary" style={{ marginBottom: 12 }}>
+                  <div className="os-row total"><span>Account</span><span>{user.email}</span></div>
+                </div>
+              )}
               <div className="order-summary">
                 {cart.map(i => (
                   <div key={i._id} className="os-row"><span>{i.name} ×{i.qty}</span><span>₹{(i.price * i.qty).toLocaleString('en-IN')}</span></div>
