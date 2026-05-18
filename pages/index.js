@@ -19,6 +19,7 @@ export default function Home() {
   const [search, setSearch]         = useState('');
   const [sort, setSort]             = useState('featured');
   const [user, setUser]             = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Load products from DB
   useEffect(() => {
@@ -225,6 +226,11 @@ export default function Home() {
         .trust-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:-.4rem 0 1.4rem}
         .trust-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.78rem;color:var(--muted)}
         .trust-item strong{display:block;color:var(--ink);font-size:.86rem;margin-bottom:2px}
+        .collection-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 1.4rem}
+        .collection{background:var(--ink);color:#f5f2ec;border-radius:10px;padding:16px;border:1px solid rgba(200,169,110,.25)}
+        .collection span{display:block;color:var(--gold);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;font-weight:800}
+        .collection strong{display:block;font-size:1.05rem;margin-bottom:6px}
+        .collection p{margin:0;color:#aaa;font-size:.82rem;line-height:1.45}
 
         .filters{display:flex;gap:7px;flex-wrap:wrap}
         .filt{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:30px;cursor:pointer;font-size:.82rem;transition:all .2s;text-transform:capitalize}
@@ -244,6 +250,7 @@ export default function Home() {
         .pcat{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
         .pname{font-size:1rem;font-weight:600;margin-bottom:5px;color:var(--ink);line-height:1.3}
         .pdesc{font-size:.78rem;color:var(--muted);line-height:1.45;margin-bottom:10px}
+        .paudience{font-size:.7rem;color:var(--gold-dark);font-weight:700;margin-bottom:8px}
         .psolve{background:rgba(26,107,107,.08);border:1px solid rgba(26,107,107,.13);border-radius:8px;padding:8px 9px;margin-bottom:10px}
         .psolve-k{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);font-weight:700;margin-bottom:3px}
         .psolve-v{font-size:.74rem;line-height:1.35;color:var(--text)}
@@ -258,6 +265,9 @@ export default function Home() {
         .porig{font-size:.75rem;color:var(--muted);text-decoration:line-through}
         .pfinal{font-size:1.2rem;font-weight:700;color:var(--teal)}
         .pdiscount{font-size:.7rem;font-weight:600;color:var(--teal);background:rgba(26,107,107,.1);padding:2px 7px;border-radius:4px;margin-top:3px;display:inline-block}
+        .pactions{display:flex;align-items:center;gap:7px}
+        .view-btn{background:#fff;border:1px solid var(--border);color:var(--ink);height:36px;border-radius:9px;padding:0 11px;cursor:pointer;font-weight:700;font-size:.78rem}
+        .view-btn:hover{border-color:var(--teal);color:var(--teal)}
         .padd-btn{background:var(--teal);border:none;color:#fff;width:36px;height:36px;border-radius:9px;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
         .padd-btn:hover{background:var(--teal-dark);transform:scale(1.08)}
 
@@ -308,6 +318,13 @@ export default function Home() {
         .confirm-btn:hover{background:var(--teal-dark)}
         .confirm-btn:disabled{opacity:.5;cursor:not-allowed}
         .secure-note{text-align:center;font-size:.72rem;color:var(--muted);margin-top:.6rem}
+        .detail-grid{display:grid;grid-template-columns:130px 1fr;gap:16px}
+        .detail-thumb{height:130px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:800;color:var(--ink)}
+        .detail-copy h2{margin:0 0 7px;font-size:1.35rem}
+        .detail-copy p{color:var(--muted);font-size:.88rem;line-height:1.55;margin:0 0 10px}
+        .detail-list{margin:10px 0 16px;padding-left:18px;color:var(--text);font-size:.84rem;line-height:1.55}
+        .detail-price{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px}
+        .detail-price strong{color:var(--teal);font-size:1.35rem}
 
         /* Success */
         .success-wrap{text-align:center;padding:2.5rem 1.5rem}
@@ -324,7 +341,7 @@ export default function Home() {
         @media(max-width:760px){
           nav{height:auto;align-items:flex-start;gap:10px;padding:12px;flex-direction:column}
           .nav-right{width:100%;flex-wrap:wrap}
-          .hero-stats,.trust-row,.store-tools{grid-template-columns:1fr}
+          .hero-stats,.trust-row,.store-tools,.collection-row,.detail-grid{grid-template-columns:1fr}
           .hero{padding:3.5rem 1rem 2.5rem}
         }
       `}</style>
@@ -364,7 +381,11 @@ export default function Home() {
               <p>Premium templates, trackers, scripts, and operating systems for creators, freelancers, founders, and small stores.</p>
               <div className="hero-btns">
                 <button className="btn-gold" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}>Browse Products ↓</button>
-                <Link className="btn-outline" href="/signup">Create Account</Link>
+                {user ? (
+                  <Link className="btn-outline" href="/dashboard">Open Dashboard</Link>
+                ) : (
+                  <Link className="btn-outline" href="/signup">Create Account</Link>
+                )}
               </div>
               <div className="hero-stats">
                 <div className="hero-stat"><strong>{products.length || '12'}+</strong><span>ready-to-use products</span></div>
@@ -403,6 +424,11 @@ export default function Home() {
               <div className="trust-item"><strong>Editable assets</strong>Use, copy, and adapt templates immediately.</div>
               <div className="trust-item"><strong>Customer account</strong>Login speeds up future checkout.</div>
             </div>
+            <div className="collection-row">
+              <div className="collection"><span>Revenue recovery</span><strong>Fix leaks before more ads</strong><p>Payments, checkout friction, reviews, and abandoned buyers.</p></div>
+              <div className="collection"><span>Creator operations</span><strong>Ship content and offers faster</strong><p>Prompts, content systems, launch kits, and product stores.</p></div>
+              <div className="collection"><span>Business systems</span><strong>Cleaner client and finance workflows</strong><p>Proposals, SOPs, onboarding, GST, and monthly tracking.</p></div>
+            </div>
 
             {loading ? (
               <div className="spinner">Loading products…</div>
@@ -428,6 +454,7 @@ export default function Home() {
                       <div className="pbody">
                         <div className="pcat">{p.category}</div>
                         <div className="pname">{p.name}</div>
+                        {p.audience && <div className="paudience">For {p.audience}</div>}
                         <div className="pdesc">{p.description}</div>
                         {p.problem && (
                           <div className="psolve">
@@ -455,7 +482,10 @@ export default function Home() {
                             <span className="pfinal">₹{p.price.toLocaleString('en-IN')}</span>
                             {disc > 0 && <span className="pdiscount">Save {disc}%</span>}
                           </div>
-                          <button className="padd-btn" onClick={() => addToCart(p)}>+</button>
+                          <div className="pactions">
+                            <button className="view-btn" onClick={() => setSelectedProduct(p)}>View</button>
+                            <button className="padd-btn" onClick={() => addToCart(p)}>+</button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -548,6 +578,46 @@ export default function Home() {
                 {paying ? '⏳ Opening Razorpay…' : `🔒 Pay ₹${total.toLocaleString('en-IN')} via Razorpay`}
               </button>
               <div className="secure-note">🔒 Payments secured by Razorpay · UPI · Cards · Wallets · EMI</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedProduct && (
+        <div className="m-ov">
+          <div className="m-box" style={{ width: 620 }}>
+            <div className="m-head">
+              <h3>Product Details</h3>
+              <button className="m-close" onClick={() => setSelectedProduct(null)}>×</button>
+            </div>
+            <div className="m-body">
+              <div className="detail-grid">
+                <div className="detail-thumb" style={{ background: colorMap[selectedProduct.color] || colorMap.teal }}>
+                  {selectedProduct.emoji || 'PK'}
+                </div>
+                <div className="detail-copy">
+                  <div className="pcat">{selectedProduct.category}</div>
+                  <h2>{selectedProduct.name}</h2>
+                  {selectedProduct.audience && <div className="paudience">For {selectedProduct.audience}</div>}
+                  <p>{selectedProduct.longDesc || selectedProduct.description}</p>
+                  {selectedProduct.problem && <div className="psolve"><div className="psolve-k">Problem</div><div className="psolve-v">{selectedProduct.problem}</div></div>}
+                  {selectedProduct.outcome && <div className="poutcome"><strong>Outcome:</strong> {selectedProduct.outcome}</div>}
+                </div>
+              </div>
+              {Array.isArray(selectedProduct.features) && (
+                <ul className="detail-list">
+                  {selectedProduct.features.map(feature => <li key={feature}>{feature}</li>)}
+                </ul>
+              )}
+              <div className="detail-price">
+                <div>
+                  <strong>₹{selectedProduct.price.toLocaleString('en-IN')}</strong>
+                  {selectedProduct.comparePrice && <span className="porig" style={{ marginLeft: 8 }}>₹{selectedProduct.comparePrice.toLocaleString('en-IN')}</span>}
+                </div>
+                <button className="confirm-btn" style={{ width: 'auto', padding: '12px 18px' }} onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); setCartOpen(true); }}>
+                  Add to cart
+                </button>
+              </div>
             </div>
           </div>
         </div>
