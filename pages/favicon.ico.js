@@ -1,0 +1,19 @@
+const icon = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0d0d14"/>
+  <path d="M18 18h28v28H18z" fill="none" stroke="#c8a96e" stroke-width="4"/>
+  <path d="M24 24h16v16H24z" fill="#1a6b6b"/>
+  <path d="M18 18l14 14 14-14M18 46l14-14 14 14" fill="none" stroke="#e8d5a8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+export async function getServerSideProps({ res }) {
+  res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.end(icon);
+
+  return { props: {} };
+}
+
+export default function Favicon() {
+  return null;
+}

@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "env": {
+    "RAZORPAY_KEY_ID": "@razorpay_key_id",
+    "RAZORPAY_KEY_SECRET": "@razorpay_key_secret",
+    "NEXT_PUBLIC_RAZORPAY_KEY_ID": "@razorpay_key_id",
+    "MONGODB_URI": "@mongodb_uri",
+    "SMTP_HOST": "@smtp_host",
+    "SMTP_PORT": "@smtp_port",
+    "SMTP_USER": "@smtp_user",
+    "SMTP_PASS": "@smtp_pass",
+    "EMAIL_FROM": "@email_from",
+    "RAZORPAY_WEBHOOK_SECRET": "@razorpay_webhook_secret",
+    "ADMIN_SECRET": "@admin_secret",
+    "NEXT_PUBLIC_SITE_URL": "@site_url"
+  }
+}
