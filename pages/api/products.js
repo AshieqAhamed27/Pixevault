@@ -1,24 +1,35 @@
-// pages/api/products.js
 import { connectDB } from '../../lib/mongoose';
 import { Product } from '../../lib/models';
+import { getPublicStarterProducts } from '../../lib/starter-products.mjs';
 
 export default async function handler(req, res) {
-  await connectDB();
-
   if (req.method === 'GET') {
-    const { category } = req.query;
-    const filter = { active: true };
-    if (category && category !== 'all') filter.category = category;
-    const products = await Product.find(filter).sort({ createdAt: -1 });
-    return res.status(200).json(products);
+    const { category = 'all' } = req.query;
+
+    try {
+      await connectDB();
+
+      const filter = { active: true };
+      if (category !== 'all') filter.category = category;
+      const products = await Product.find(filter).sort({ createdAt: -1 });
+
+      if (products.length > 0) return res.status(200).json(products);
+    } catch (err) {
+      console.error('Falling back to starter products:', err.message);
+    }
+
+    res.setHeader('x-pixelvault-catalog', 'starter');
+    return res.status(200).json(getPublicStarterProducts(category));
   }
 
-  // POST — add a product (admin only; protect with a secret header in production)
+  await connectDB();
+
   if (req.method === 'POST') {
     const adminSecret = req.headers['x-admin-secret'];
     if (adminSecret !== process.env.ADMIN_SECRET) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+
     try {
       const product = await Product.create(req.body);
       return res.status(201).json(product);
@@ -28,5 +39,5 @@ export default async function handler(req, res) {
   }
 
   res.setHeader('Allow', ['GET', 'POST']);
-  res.status(405).end(`Method ${req.method} Not Allowed`);
+  return res.status(405).end(`Method ${req.method} Not Allowed`);
 }

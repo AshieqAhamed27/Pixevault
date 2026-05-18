@@ -1,58 +1,79 @@
-// pages/api/create-order.js
 import Razorpay from 'razorpay';
 import { connectDB } from '../../lib/mongoose';
 import { Order, Product } from '../../lib/models';
 
-const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+function getRazorpayClient() {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay keys are not configured');
+  }
+
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { items, customer } = req.body;
-  // items: [{ productId, qty }]
-  // customer: { name, email, phone }
 
   if (!items?.length || !customer?.email || !customer?.name) {
     return res.status(400).json({ error: 'items and customer (name, email) are required' });
   }
 
-  await connectDB();
+  let razorpay;
 
-  // Fetch products from DB to get authoritative prices (never trust client-side prices)
-  const productIds = items.map(i => i.productId);
+  try {
+    razorpay = getRazorpayClient();
+    await connectDB();
+  } catch (err) {
+    console.error('Checkout setup error:', err.message);
+    return res.status(500).json({
+      error: 'Checkout is not configured yet. Add Razorpay and MongoDB environment variables in Vercel.',
+    });
+  }
+
+  const productIds = items.map((item) => item.productId);
   const dbProducts = await Product.find({ _id: { $in: productIds }, active: true });
 
   if (dbProducts.length !== items.length) {
     return res.status(400).json({ error: 'One or more products not found or inactive' });
   }
 
-  const enrichedItems = items.map(i => {
-    const p = dbProducts.find(p => p._id.toString() === i.productId);
-    return { productId: i.productId, name: p.name, price: p.price, downloadUrl: p.downloadUrl, qty: i.qty || 1 };
+  const enrichedItems = items.map((item) => {
+    const product = dbProducts.find((entry) => entry._id.toString() === item.productId);
+    return {
+      productId: item.productId,
+      name: product.name,
+      price: product.price,
+      downloadUrl: product.downloadUrl,
+      qty: item.qty || 1,
+    };
   });
 
-  const subtotal = enrichedItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const gst      = Math.round(subtotal * 0.18);
-  const total    = subtotal + gst;
-  const orderId  = `PV-${Date.now()}`;
+  const subtotal = enrichedItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const gst = Math.round(subtotal * 0.18);
+  const total = subtotal + gst;
+  const orderId = `PV-${Date.now()}`;
 
-  // Create Razorpay order (amount in paise)
   const rzpOrder = await razorpay.orders.create({
-    amount:   total * 100,
+    amount: total * 100,
     currency: 'INR',
-    receipt:  orderId,
-    notes:    { customer_email: customer.email, customer_name: customer.name },
+    receipt: orderId,
+    notes: { customer_email: customer.email, customer_name: customer.name },
   });
 
-  // Persist to MongoDB with status=created
   await Order.create({
     orderId,
     razorpayOrderId: rzpOrder.id,
     customer,
-    items: enrichedItems.map(i => ({ productId: i.productId, name: i.name, price: i.price, qty: i.qty })),
+    items: enrichedItems.map((item) => ({
+      productId: item.productId,
+      name: item.name,
+      price: item.price,
+      qty: item.qty,
+    })),
     subtotal,
     gst,
     total,
