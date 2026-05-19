@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { connectDB } from '../../lib/mongoose';
-import { Order } from '../../lib/models';
+import { Order, ReferralConversion } from '../../lib/models';
 import { sendOrderConfirmation } from '../../lib/mailer';
 
 function envMissing(key) {
@@ -44,6 +44,31 @@ export default async function handler(req, res) {
     );
 
     if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+
+    if (order.referral?.code && order.referral?.referrerEmail) {
+      await ReferralConversion.findOneAndUpdate(
+        { orderId: order.orderId },
+        {
+          $set: {
+            code: order.referral.code,
+            referrerEmail: order.referral.referrerEmail,
+            buyerEmail: order.customer?.email,
+            buyerName: order.customer?.name,
+            productSlugs: order.items.map((item) => item.slug).filter(Boolean),
+            subtotal: order.subtotal || 0,
+            total: order.total || 0,
+            commissionRate: order.referral.commissionRate || 0,
+            commissionAmount: order.referral.commissionAmount || 0,
+            status: 'approved',
+            paidAt: new Date(),
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+
+      order.referral.status = 'approved';
+      await order.save();
+    }
 
     if (!order.downloadsSent) {
       try {

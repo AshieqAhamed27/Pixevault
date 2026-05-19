@@ -116,6 +116,11 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
       : [{ slug: product.slug, name: product.name, image: product.image, emoji: product.emoji, categoryLabel: categoryName(product) }]
   ), [gallery, product]);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [leadOpen, setLeadOpen] = useState(false);
+  const [leadForm, setLeadForm] = useState({ name: '', email: '', phone: '' });
+  const [leadSubmitting, setLeadSubmitting] = useState(false);
+  const [leadMessage, setLeadMessage] = useState('');
+  const [referralCode, setReferralCode] = useState('');
 
   useEffect(() => {
     if (heroSlides.length <= 1) return undefined;
@@ -125,10 +130,65 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
     return () => clearInterval(timer);
   }, [heroSlides.length]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const urlRef = params.get('ref');
+    const cleanRef = String(urlRef || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18);
+    if (cleanRef) {
+      window.localStorage.setItem('pixelvault_referral_code', cleanRef);
+      setReferralCode(cleanRef);
+    } else {
+      setReferralCode(window.localStorage.getItem('pixelvault_referral_code') || '');
+    }
+
+    setLeadForm((form) => ({
+      ...form,
+      name: form.name || window.localStorage.getItem('pixelvault_lead_name') || '',
+      email: form.email || window.localStorage.getItem('pixelvault_lead_email') || '',
+    }));
+  }, []);
+
   function moveSlide(direction) {
     setActiveSlide((current) => (
       (current + direction + heroSlides.length) % heroSlides.length
     ));
+  }
+
+  async function unlockFreeDownload(event) {
+    event.preventDefault();
+    setLeadMessage('');
+    if (!leadForm.email.trim()) {
+      setLeadMessage('Email is required to unlock the free download.');
+      return;
+    }
+
+    setLeadSubmitting(true);
+    try {
+      const res = await fetch('/api/lead-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: product.slug,
+          name: leadForm.name,
+          email: leadForm.email,
+          phone: leadForm.phone,
+          referralCode,
+          source: 'product-page',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to unlock download');
+
+      window.localStorage.setItem('pixelvault_lead_email', leadForm.email.trim());
+      window.localStorage.setItem('pixelvault_lead_name', leadForm.name.trim());
+      window.location.href = data.downloadUrl;
+      setLeadOpen(false);
+    } catch (err) {
+      setLeadMessage(err.message || 'Unable to unlock free download right now.');
+    } finally {
+      setLeadSubmitting(false);
+    }
   }
 
   return (
@@ -200,7 +260,7 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
               <div className="actions">
                 <a href={`/api/sample-download?slug=${encodeURIComponent(product.slug)}`}>Free sample</a>
                 {isFree ? (
-                  <a className="primary" href={`/api/free-download?slug=${encodeURIComponent(product.slug)}`}>Download free</a>
+                  <button className="primary" type="button" onClick={() => setLeadOpen(true)}>Download free</button>
                 ) : (
                   <Link className="primary" href={`/?product=${encodeURIComponent(product.slug)}`}>Buy on store</Link>
                 )}
@@ -272,6 +332,23 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
             </div>
           </section>
         )}
+
+        {leadOpen && (
+          <div className="modal">
+            <form className="modal-box" onSubmit={unlockFreeDownload}>
+              <div className="modal-head">
+                <h2>Unlock free download</h2>
+                <button type="button" onClick={() => setLeadOpen(false)}>×</button>
+              </div>
+              <p className="lead-note">Enter your email to unlock <strong>{product.name}</strong>. This helps PixelVault build an email list for offers and future paid bundles.</p>
+              {leadMessage && <p className="lead-error">{leadMessage}</p>}
+              <label>Name<input value={leadForm.name} onChange={(event) => setLeadForm({ ...leadForm, name: event.target.value })} placeholder="Your name" /></label>
+              <label>Email *<input type="email" required value={leadForm.email} onChange={(event) => setLeadForm({ ...leadForm, email: event.target.value })} placeholder="you@email.com" /></label>
+              <label>Phone optional<input value={leadForm.phone} onChange={(event) => setLeadForm({ ...leadForm, phone: event.target.value })} placeholder="+91 9876543210" /></label>
+              <button className="unlock" type="submit" disabled={leadSubmitting}>{leadSubmitting ? 'Unlocking...' : 'Unlock download'}</button>
+            </form>
+          </div>
+        )}
       </main>
 
       <style jsx>{`
@@ -303,7 +380,7 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
         .audience{display:inline-flex;align-self:flex-start;background:#e6f4f4;color:#0f4444;border-radius:999px;padding:7px 11px;font-weight:800;font-size:.82rem;margin:8px 0 18px}
         .price-row{display:flex;align-items:center;justify-content:space-between;gap:14px;background:#fff;border:1px solid #d8d0c4;border-radius:12px;padding:16px;margin-top:8px}
         .price-row strong{display:block;color:#1a6b6b;font-size:1.9rem}.compare{text-decoration:line-through;color:#8b8178;font-size:.9rem}
-        .actions{display:flex;gap:10px;flex-wrap:wrap}.actions a{border:1px solid #d8d0c4;border-radius:8px;padding:11px 14px;font-weight:850;background:#fbfaf7}
+        .actions{display:flex;gap:10px;flex-wrap:wrap}.actions a,.actions button{border:1px solid #d8d0c4;border-radius:8px;padding:11px 14px;font-weight:850;background:#fbfaf7;font:inherit;cursor:pointer}
         .actions .primary{background:#1a6b6b;color:#fff;border-color:#1a6b6b}
         .trust{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.trust span{background:#fff;border:1px solid #d8d0c4;border-radius:999px;padding:7px 10px;color:#605b55;font-size:.78rem;font-weight:800}
         .grid{display:grid;grid-template-columns:1fr 320px;gap:16px;padding:0 20px}
@@ -314,6 +391,12 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
         .reviews,.related{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
         .review,.related-card{border:1px solid #e4ddd4;background:#fbfaf7;border-radius:10px;padding:13px}
         .review p{margin:.4rem 0 0;color:#625b54;font-size:.9rem}.related-card{display:grid;gap:8px}.related-card img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:8px;background:#111}.related-card span{color:#1a6b6b;font-weight:850}
+        .modal{position:fixed;inset:0;background:rgba(13,13,20,.74);display:flex;align-items:center;justify-content:center;z-index:30;padding:18px;backdrop-filter:blur(6px)}
+        .modal-box{width:min(460px,100%);background:#f5f2ec;border-radius:14px;overflow:hidden;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.32)}
+        .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.modal-head h2{font-size:1.1rem}.modal-head button{border:0;background:none;font-size:1.35rem;cursor:pointer}
+        .lead-note{background:#edf8f4;border:1px solid rgba(26,107,107,.16);border-radius:9px;padding:11px 12px;color:#0f4444;font-size:.84rem}.lead-error{background:#fff3f1;border:1px solid #f0bbb3;color:#a33427;border-radius:8px;padding:9px 10px;font-size:.84rem}
+        .modal-box label{display:grid;gap:5px;font-size:.76rem;font-weight:850;text-transform:uppercase;letter-spacing:.05em;color:#7a7065;margin-top:10px}.modal-box input{border:1px solid #d8d0c4;border-radius:8px;background:#fff;padding:11px;font:inherit;text-transform:none;letter-spacing:0;color:#171720}
+        .unlock{width:100%;border:0;background:#1a6b6b;color:#fff;border-radius:9px;padding:13px;font-weight:850;margin-top:14px;cursor:pointer}.unlock:disabled{opacity:.6;cursor:not-allowed}
         @media(max-width:820px){.hero,.grid{grid-template-columns:1fr}.media,.slider-track,.slide-fallback{min-height:260px}.price-row{align-items:flex-start;flex-direction:column}.side{position:static}}
       `}</style>
     </>

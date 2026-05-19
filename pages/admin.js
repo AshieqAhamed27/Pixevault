@@ -37,6 +37,7 @@ export default function AdminPage() {
   const [revenue, setRevenue] = useState(0);
   const [products, setProducts] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [leads, setLeads] = useState({ total: 0, downloads: 0, leads: [] });
   const [form, setForm] = useState(emptyProduct);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,15 +60,17 @@ export default function AdminPage() {
     try {
       window.localStorage.setItem('pixelvault_admin_secret', nextSecret);
       const headers = { 'x-admin-secret': nextSecret };
-      const [ordersRes, productsRes, submissionsRes] = await Promise.all([
+      const [ordersRes, productsRes, submissionsRes, leadsRes] = await Promise.all([
         fetch('/api/orders', { headers }),
         fetch('/api/products'),
         fetch('/api/creator-submissions', { headers }),
+        fetch('/api/leads', { headers }),
       ]);
 
       const ordersData = await ordersRes.json();
       const productsData = await productsRes.json();
       const submissionsData = await submissionsRes.json();
+      const leadsData = leadsRes.ok ? await leadsRes.json() : { total: 0, downloads: 0, leads: [] };
       if (!ordersRes.ok) throw new Error(ordersData.error || 'Unable to load orders');
       if (!submissionsRes.ok) throw new Error(submissionsData.error || 'Unable to load submissions');
 
@@ -75,6 +78,7 @@ export default function AdminPage() {
       setRevenue(ordersData.revenue || 0);
       setProducts(Array.isArray(productsData) ? productsData : []);
       setSubmissions(submissionsData.submissions || []);
+      setLeads(leadsData);
       setStatus('Admin data loaded.');
     } catch (err) {
       setStatus(err.message || 'Unable to load admin data.');
@@ -136,6 +140,7 @@ export default function AdminPage() {
           <Link href="/" className="brand"><em>Pixel</em>Vault</Link>
           <a href="#overview">Overview</a>
           <a href="#products">Products</a>
+          <a href="#leads">Leads</a>
           <a href="#orders">Orders</a>
           <a href="#creators">Creator submissions</a>
         </aside>
@@ -158,6 +163,7 @@ export default function AdminPage() {
             <div><span>Revenue</span><strong>{money(revenue)}</strong></div>
             <div><span>Paid orders</span><strong>{orders.length}</strong></div>
             <div><span>Active products</span><strong>{activeProducts.length}</strong></div>
+            <div><span>Email leads</span><strong>{leads.total || 0}</strong></div>
             <div><span>Creator submissions</span><strong>{submissions.length}</strong></div>
           </section>
 
@@ -207,7 +213,24 @@ export default function AdminPage() {
                 <div className="row" key={order.orderId}>
                   <div><strong>{order.orderId}</strong><span>{order.customer?.email}</span></div>
                   <div>{money(order.total)}</div>
-                  <div>{order.status}</div>
+                  <div>{order.referral?.code ? `Referral ${order.referral.code}` : order.status}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section id="leads" className="panel">
+            <p className="eyebrow">Free download leads</p>
+            <div className="lead-summary">
+              <div><span>Total leads</span><strong>{leads.total || 0}</strong></div>
+              <div><span>Downloads</span><strong>{leads.downloads || 0}</strong></div>
+            </div>
+            <div className="table">
+              {(leads.leads || []).slice(0, 40).map((lead) => (
+                <div className="row" key={lead._id}>
+                  <div><strong>{lead.email}</strong><span>{lead.name || 'No name'} / {lead.productName || lead.slug}</span></div>
+                  <div>{lead.downloads || 1} downloads</div>
+                  <div>{lead.referralCode || lead.source}</div>
                 </div>
               ))}
             </div>
@@ -240,11 +263,12 @@ export default function AdminPage() {
         .secret{display:flex;gap:8px}.secret input,.product-form input,.product-form select,.product-form textarea{border:1px solid #d8d0c4;border-radius:8px;background:#fff;padding:11px;font-family:inherit;color:#171720}
         button,.secret button{border:none;background:#1a6b6b;color:#fff;border-radius:8px;padding:11px 14px;font-weight:850;cursor:pointer}button:disabled{opacity:.6}
         .status{background:#fff;border:1px solid #d8d0c4;border-radius:9px;padding:12px;margin-bottom:16px;color:#625b54}
-        .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.metrics div,.panel{background:#fff;border:1px solid #d8d0c4;border-radius:12px;padding:18px}.metrics span{display:block;color:#7a7065;font-size:.78rem;margin-bottom:7px}.metrics strong{font-size:1.5rem;color:#1a6b6b}
+        .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}.metrics div,.panel{background:#fff;border:1px solid #d8d0c4;border-radius:12px;padding:18px}.metrics span{display:block;color:#7a7065;font-size:.78rem;margin-bottom:7px}.metrics strong{font-size:1.5rem;color:#1a6b6b}
+        .lead-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}.lead-summary div{background:#fbfaf7;border:1px solid #e7ded3;border-radius:9px;padding:13px}.lead-summary span{display:block;color:#7a7065;font-size:.78rem;margin-bottom:6px}.lead-summary strong{font-size:1.35rem;color:#1a6b6b}
         .panel{margin-bottom:16px}.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
         .product-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px}.product-form textarea{min-height:88px}.product-form button{grid-column:1/-1}
         .table{display:grid;gap:8px}.row{display:grid;grid-template-columns:1fr 140px 180px;gap:12px;align-items:center;border:1px solid #e7ded3;background:#fbfaf7;border-radius:9px;padding:12px}.row span{display:block;color:#7a7065;font-size:.82rem;margin-top:3px}.row-actions{display:flex;gap:8px}.row-actions a,.row-actions button{font-size:.8rem;padding:8px 10px}.row-actions a{background:#0d0d14;color:#e8d5a8;border-radius:7px;font-weight:850}
-        @media(max-width:860px){.admin{grid-template-columns:1fr}aside{position:static;height:auto}.metrics,.product-form,.row{grid-template-columns:1fr}header{flex-direction:column}.secret{width:100%}.secret input{flex:1}}
+        @media(max-width:860px){.admin{grid-template-columns:1fr}aside{position:static;height:auto}.metrics,.lead-summary,.product-form,.row{grid-template-columns:1fr}header{flex-direction:column}.secret{width:100%}.secret input{flex:1}}
       `}</style>
     </>
   );

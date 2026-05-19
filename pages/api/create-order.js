@@ -2,9 +2,10 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import { connectDB } from '../../lib/mongoose';
-import { Order, Product } from '../../lib/models';
+import { AffiliateProfile, Order, Product } from '../../lib/models';
 import { getSeedProducts } from '../../lib/starter-products.mjs';
 import { applyCouponToCart } from '../../lib/coupons.mjs';
+import { calculateReferralCommission, normalizeReferralCode, REFERRAL_COMMISSION_RATE } from '../../lib/referrals.mjs';
 
 const CHECKOUT_ENV = ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'MONGODB_URI'];
 
@@ -71,7 +72,7 @@ async function seedMissingStarterProducts(productRefs, foundProducts) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { items, customer, couponCode } = req.body || {};
+  const { items, customer, couponCode, referralCode } = req.body || {};
 
   if (!items?.length || !customer?.email || !customer?.name) {
     return res.status(400).json({ error: 'items and customer (name, email) are required' });
@@ -120,13 +121,34 @@ export default async function handler(req, res) {
     const total = taxableSubtotal + gst;
     const orderId = `PV-${Date.now()}`;
     const downloadToken = crypto.randomBytes(24).toString('hex');
+    const normalizedReferralCode = normalizeReferralCode(referralCode);
+    let referral = null;
+
+    if (normalizedReferralCode) {
+      const affiliate = await AffiliateProfile.findOne({ code: normalizedReferralCode, active: true }).lean();
+      const buyerEmail = String(customer.email || '').trim().toLowerCase();
+      if (affiliate && affiliate.userEmail !== buyerEmail) {
+        referral = {
+          code: affiliate.code,
+          referrerEmail: affiliate.userEmail,
+          referrerName: affiliate.userName || '',
+          commissionRate: REFERRAL_COMMISSION_RATE,
+          commissionAmount: calculateReferralCommission(taxableSubtotal),
+          status: 'pending',
+        };
+      }
+    }
 
     const razorpay = getRazorpayClient();
     const rzpOrder = await razorpay.orders.create({
       amount: total * 100,
       currency: 'INR',
       receipt: orderId,
-      notes: { customer_email: customer.email, customer_name: customer.name },
+      notes: {
+        customer_email: customer.email,
+        customer_name: customer.name,
+        referral_code: referral?.code || '',
+      },
     });
 
     await Order.create({
@@ -152,6 +174,7 @@ export default async function handler(req, res) {
       total,
       status: 'created',
       downloadToken,
+      referral,
     });
 
     return res.status(200).json({

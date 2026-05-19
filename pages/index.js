@@ -77,6 +77,10 @@ export default function Home({ initialUser = null }) {
   const [couponCode, setCouponCode] = useState('');
   const [heroSlide, setHeroSlide]   = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [leadProduct, setLeadProduct] = useState(null);
+  const [leadForm, setLeadForm] = useState({ name: '', email: '', phone: '' });
+  const [leadSubmitting, setLeadSubmitting] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
 
   // Load products from DB
   useEffect(() => {
@@ -97,9 +101,28 @@ export default function Home({ initialUser = null }) {
             name: prev.name || data.user.name || '',
             email: prev.email || data.user.email || '',
           }));
+          setLeadForm(prev => ({
+            ...prev,
+            name: prev.name || data.user.name || '',
+            email: prev.email || data.user.email || '',
+          }));
         }
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const urlRef = params.get('ref');
+    const cleanRef = String(urlRef || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 18);
+    if (cleanRef) {
+      window.localStorage.setItem('pixelvault_referral_code', cleanRef);
+      setReferralCode(cleanRef);
+      return;
+    }
+
+    setReferralCode(window.localStorage.getItem('pixelvault_referral_code') || '');
   }, []);
 
   useEffect(() => {
@@ -153,8 +176,53 @@ export default function Home({ initialUser = null }) {
 
   const downloadFreeProduct = (product) => {
     if (!product?.slug) return;
-    window.location.href = `/api/free-download?slug=${encodeURIComponent(product.slug)}`;
-    showToast(`${product.name} download started`);
+    const savedEmail = typeof window !== 'undefined' ? window.localStorage.getItem('pixelvault_lead_email') : '';
+    const savedName = typeof window !== 'undefined' ? window.localStorage.getItem('pixelvault_lead_name') : '';
+    setLeadForm(prev => ({
+      name: prev.name || customer.name || user?.name || savedName || '',
+      email: prev.email || customer.email || user?.email || savedEmail || '',
+      phone: prev.phone || customer.phone || '',
+    }));
+    setLeadProduct(product);
+  };
+
+  const unlockFreeDownload = async (event) => {
+    event.preventDefault();
+    if (!leadProduct?.slug) return;
+    if (!leadForm.email.trim()) {
+      showToast('Enter your email to unlock the free download');
+      return;
+    }
+
+    setLeadSubmitting(true);
+    try {
+      const res = await fetch('/api/lead-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: leadProduct.slug,
+          name: leadForm.name,
+          email: leadForm.email,
+          phone: leadForm.phone,
+          referralCode,
+          source: 'storefront',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to unlock download');
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('pixelvault_lead_email', leadForm.email.trim());
+        window.localStorage.setItem('pixelvault_lead_name', leadForm.name.trim());
+        window.location.href = data.downloadUrl;
+      }
+      showToast(`${leadProduct.name} download started`);
+      setLeadProduct(null);
+    } catch (err) {
+      showToast(err.message || 'Unable to unlock free download');
+    } finally {
+      setLeadSubmitting(false);
+    }
   };
 
   const changeQty = (id, delta) => {
@@ -268,6 +336,7 @@ export default function Home({ initialUser = null }) {
           items: cart.map(i => ({ productId: i._id, qty: i.qty })),
           customer,
           couponCode,
+          referralCode: referralCode || (typeof window !== 'undefined' ? window.localStorage.getItem('pixelvault_referral_code') : ''),
         }),
       });
       const data = await res.json();
@@ -442,6 +511,12 @@ export default function Home({ initialUser = null }) {
         .trust-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 1.4rem}
         .trust-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.78rem;color:var(--muted)}
         .trust-item strong{display:block;color:var(--ink);font-size:.86rem;margin-bottom:2px}
+        .money-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 1.6rem}
+        .money-card{border:1px solid var(--border);border-radius:10px;background:#fff;padding:15px;text-align:left;cursor:pointer;min-height:138px;display:flex;flex-direction:column;gap:8px;transition:all .18s}
+        .money-card:hover{border-color:var(--teal);box-shadow:0 10px 28px rgba(26,107,107,.1);transform:translateY(-2px)}
+        .money-card span{color:var(--teal);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:850}
+        .money-card strong{font-size:1.05rem;color:var(--ink)}
+        .money-card p{color:var(--muted);font-size:.82rem;line-height:1.5;margin:0}
 
         .filters{display:flex;gap:7px;flex-wrap:wrap}
         .filt{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:30px;cursor:pointer;font-size:.82rem;transition:all .2s}
@@ -534,6 +609,7 @@ export default function Home({ initialUser = null }) {
         .confirm-btn:hover{background:var(--teal-dark)}
         .confirm-btn:disabled{opacity:.5;cursor:not-allowed}
         .secure-note{text-align:center;font-size:.72rem;color:var(--muted);margin-top:.6rem}
+        .lead-note{background:#edf8f4;border:1px solid rgba(26,107,107,.16);border-radius:9px;padding:11px 12px;color:#0f4444;font-size:.82rem;line-height:1.5;margin-bottom:1rem}
         .detail-grid{display:grid;grid-template-columns:130px 1fr;gap:16px}
         .detail-thumb{height:130px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:800;color:var(--ink);overflow:hidden;background:#111}
         .detail-image{width:100%;height:100%;object-fit:cover;display:block}
@@ -567,7 +643,7 @@ export default function Home({ initialUser = null }) {
         @media(max-width:760px){
           nav{height:auto;align-items:flex-start;gap:10px;padding:12px;flex-direction:column}
           .nav-right{width:100%;flex-wrap:wrap}
-          .hero-wrap,.hero-stats,.hero-offer-top,.trust-row,.store-tools,.merch-grid,.rail-grid,.detail-grid{grid-template-columns:1fr}
+          .hero-wrap,.hero-stats,.hero-offer-top,.trust-row,.money-row,.store-tools,.merch-grid,.rail-grid,.detail-grid{grid-template-columns:1fr}
           .hero{padding:2rem 1rem 1.2rem}
           .hero h1{font-size:2.1rem}
           .hero-offer-media,.hero-offer-track{height:260px;min-height:260px}
@@ -586,6 +662,7 @@ export default function Home({ initialUser = null }) {
         <div className="logo"><em>Pixel</em>Vault ✦</div>
         <div className="nav-right">
           <button className={`nav-btn ${tab==='store'?'on':''}`} onClick={() => setTab('store')}>Store</button>
+          <Link className="auth-link" href="/bundles">Bundles</Link>
           <Link className="auth-link" href="/blog">Guides</Link>
           <Link className="auth-link" href="/sell">Sell</Link>
           {user && <Link className="auth-link" href="/dashboard">My Dashboard</Link>}
@@ -697,6 +774,23 @@ export default function Home({ initialUser = null }) {
               <div className="trust-item"><strong>Real workflows</strong>Built around actual business problems.</div>
               <div className="trust-item"><strong>Editable assets</strong>Copy, customize, and launch quickly.</div>
               <div className="trust-item"><strong>Secure payments</strong>UPI, cards, wallets, and Razorpay checkout.</div>
+            </div>
+            <div className="money-row">
+              <Link className="money-card" href="/bundles">
+                <span>Higher order value</span>
+                <strong>Bundle landing pages</strong>
+                <p>Sell 3-4 joined products together, show savings, and push buyers toward bigger purchases.</p>
+              </Link>
+              <button className="money-card" onClick={() => setFilter('free-project-ideas')}>
+                <span>Email list growth</span>
+                <strong>Free lead magnets</strong>
+                <p>Offer project ideas and starter guides free after email capture, then sell paid bundles.</p>
+              </button>
+              <Link className="money-card" href={user ? '/dashboard#referrals' : '/signup'}>
+                <span>Referral sales</span>
+                <strong>Let users promote</strong>
+                <p>Logged-in users get a referral link and can earn commission for real paid conversions.</p>
+              </Link>
             </div>
 
             {!loading && products.length > 0 && (
@@ -937,6 +1031,39 @@ export default function Home({ initialUser = null }) {
             )}
           </div>
         </>
+      )}
+
+      {leadProduct && (
+        <div className="m-ov">
+          <div className="m-box">
+            <div className="m-head">
+              <h3>Unlock Free Download</h3>
+              <button className="m-close" onClick={() => setLeadProduct(null)}>×</button>
+            </div>
+            <form className="m-body" onSubmit={unlockFreeDownload}>
+              <div className="lead-note">
+                <strong>{leadProduct.name}</strong><br />
+                Enter your email to get the free file. We use this to send useful product updates and bundle offers.
+              </div>
+              <div className="fg">
+                <label className="fl">Name</label>
+                <input className="fi" placeholder="Your name" value={leadForm.name} onChange={e => setLeadForm(form => ({ ...form, name: e.target.value }))} />
+              </div>
+              <div className="fg">
+                <label className="fl">Email *</label>
+                <input className="fi" type="email" required placeholder="you@email.com" value={leadForm.email} onChange={e => setLeadForm(form => ({ ...form, email: e.target.value }))} />
+              </div>
+              <div className="fg">
+                <label className="fl">Phone optional</label>
+                <input className="fi" placeholder="+91 9876543210" value={leadForm.phone} onChange={e => setLeadForm(form => ({ ...form, phone: e.target.value }))} />
+              </div>
+              <button className="confirm-btn" type="submit" disabled={leadSubmitting}>
+                {leadSubmitting ? 'Unlocking...' : 'Unlock free download'}
+              </button>
+              <div className="secure-note">No physical shipping. Your download starts instantly after unlock.</div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* ── PAYMENT MODAL ──────────────────────────────────────────────── */}

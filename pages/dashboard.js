@@ -27,6 +27,7 @@ export default function CustomerDashboard() {
   const [authChecked, setAuthChecked] = useState(false);
   const [account, setAccount] = useState(null);
   const [products, setProducts] = useState([]);
+  const [referrals, setReferrals] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reviewDrafts, setReviewDrafts] = useState({});
@@ -45,17 +46,20 @@ export default function CustomerDashboard() {
           return;
         }
 
-        const [ordersRes, productsRes] = await Promise.all([
+        const [ordersRes, productsRes, referralsRes] = await Promise.all([
           fetch('/api/account/orders'),
           fetch('/api/products'),
+          fetch('/api/referrals'),
         ]);
 
         const ordersData = await ordersRes.json();
         if (!ordersRes.ok) throw new Error(ordersData.error || 'Unable to load account');
 
         const productData = await productsRes.json();
+        const referralData = referralsRes.ok ? await referralsRes.json() : null;
         setAccount(ordersData);
         setProducts(Array.isArray(productData) ? productData : []);
+        setReferrals(referralData);
       } catch (err) {
         setError(err.message || 'Unable to load dashboard');
       } finally {
@@ -116,6 +120,12 @@ export default function CustomerDashboard() {
     }
   };
 
+  const copyReferralLink = async () => {
+    if (!referrals?.profile?.link) return;
+    await navigator.clipboard.writeText(referrals.profile.link);
+    setReviewMessages((prev) => ({ ...prev, referral: 'Referral link copied.' }));
+  };
+
   if (!authChecked || loading) {
     return (
       <>
@@ -163,6 +173,7 @@ export default function CustomerDashboard() {
           <Link href="/" className="brand"><em>Pixel</em>Vault</Link>
           <nav>
             <a href="#overview">Overview</a>
+            <a href="#referrals">Referrals</a>
             <a href="#downloads">Downloads</a>
             <a href="#orders">Orders</a>
             <a href="#recommended">Recommended</a>
@@ -187,6 +198,57 @@ export default function CustomerDashboard() {
             <div><span>Paid orders</span><strong>{summary.paidOrders || 0}</strong></div>
             <div><span>Downloads</span><strong>{summary.downloads || 0}</strong></div>
             <div><span>Pending</span><strong>{summary.pendingOrders || 0}</strong></div>
+          </section>
+
+          <section id="referrals" className="panel referral-panel">
+            <div className="panel-head">
+              <div>
+                <p className="eyebrow">Earn with PixelVault</p>
+                <h2>Your referral link</h2>
+              </div>
+            </div>
+            {!referrals ? (
+              <div className="empty">Referral profile is being prepared. Refresh after a moment.</div>
+            ) : (
+              <>
+                <div className="referral-box">
+                  <div>
+                    <span>Commission rate</span>
+                    <strong>{Math.round((referrals.profile.commissionRate || 0) * 100)}%</strong>
+                  </div>
+                  <div>
+                    <span>Conversions</span>
+                    <strong>{referrals.summary.conversions || 0}</strong>
+                  </div>
+                  <div>
+                    <span>Approved commission</span>
+                    <strong>{formatMoney(referrals.summary.approvedCommission)}</strong>
+                  </div>
+                </div>
+                <div className="referral-link">
+                  <input readOnly value={referrals.profile.link} />
+                  <button onClick={copyReferralLink}>Copy link</button>
+                </div>
+                {reviewMessages.referral && <p className="referral-msg">{reviewMessages.referral}</p>}
+                <p className="referral-help">Share this link with classmates, freelancer groups, or creators. When a new buyer purchases through your link, the conversion appears here after payment verification.</p>
+                {referrals.referrals?.length > 0 && (
+                  <div className="orders referral-list">
+                    {referrals.referrals.map((item) => (
+                      <article className="order-row" key={item.orderId}>
+                        <div>
+                          <strong>{item.orderId}</strong>
+                          <span>{formatDate(item.createdAt)} · {item.productSlugs.join(', ')}</span>
+                        </div>
+                        <div className="order-meta">
+                          <span className={`status ${item.status}`}>{item.status}</span>
+                          <strong>{formatMoney(item.commissionAmount)}</strong>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </section>
 
           <section id="downloads" className="panel">
@@ -326,6 +388,15 @@ function DashboardStyles() {
       .panel{padding:20px;margin-bottom:18px}
       .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
       .download-grid,.rec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+      .referral-box{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+      .referral-box div{background:#fbfaf7;border:1px solid #e2dbd1;border-radius:9px;padding:14px}
+      .referral-box span{display:block;color:#7a7065;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+      .referral-box strong{font-size:1.45rem;color:#1a6b6b}
+      .referral-link{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:8px}
+      .referral-link input{border:1px solid #d8d0c4;border-radius:8px;background:#fff;padding:11px;font:inherit;color:#171720}
+      .referral-link button{border:0;background:#0d0d14;color:#e8d5a8;border-radius:8px;padding:11px 14px;font-weight:850;cursor:pointer}
+      .referral-help,.referral-msg{margin:8px 0 0;color:#7a7065;font-size:.86rem;line-height:1.5}.referral-msg{color:#1a6b6b;font-weight:800}
+      .referral-list{margin-top:14px}
       .download-card,.rec-card,.order-row{border:1px solid #e2dbd1;background:#fbfaf7;border-radius:9px;padding:15px}
       .download-card span,.rec-card span{display:block;color:#7a7065;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
       .download-card p,.rec-card p{color:#7a7065;font-size:.86rem;line-height:1.45}
@@ -358,11 +429,11 @@ function DashboardStyles() {
         .dash-shell{grid-template-columns:1fr}
         .sidebar{height:auto;position:static}
         .sidebar nav{flex-direction:row;flex-wrap:wrap}
-        .metrics{grid-template-columns:repeat(2,1fr)}
+        .metrics,.referral-box{grid-template-columns:repeat(2,1fr)}
         .topbar,.order-row{align-items:flex-start;flex-direction:column}
         .order-meta{text-align:left}
       }
-      @media(max-width:520px){.metrics{grid-template-columns:1fr}.dash-main{padding:18px}}
+      @media(max-width:520px){.metrics,.referral-box,.referral-link{grid-template-columns:1fr}.dash-main{padding:18px}}
     `}</style>
   );
 }
