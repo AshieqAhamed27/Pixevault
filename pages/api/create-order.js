@@ -4,6 +4,7 @@ import Razorpay from 'razorpay';
 import { connectDB } from '../../lib/mongoose';
 import { Order, Product } from '../../lib/models';
 import { getSeedProducts } from '../../lib/starter-products.mjs';
+import { applyCouponToCart } from '../../lib/coupons.mjs';
 
 const CHECKOUT_ENV = ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'MONGODB_URI'];
 
@@ -70,7 +71,7 @@ async function seedMissingStarterProducts(productRefs, foundProducts) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { items, customer } = req.body || {};
+  const { items, customer, couponCode } = req.body || {};
 
   if (!items?.length || !customer?.email || !customer?.name) {
     return res.status(400).json({ error: 'items and customer (name, email) are required' });
@@ -104,14 +105,19 @@ export default async function handler(req, res) {
         slug: product.slug,
         name: product.name,
         price: product.price,
+        category: product.category,
+        bundle: product.bundle === true,
         downloadUrl: product.downloadUrl,
         qty: item.qty || 1,
       };
     });
 
     const subtotal = enrichedItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const gst = Math.round(subtotal * 0.18);
-    const total = subtotal + gst;
+    const couponResult = applyCouponToCart(couponCode, enrichedItems, dbProducts.map((product) => product.toObject()));
+    const discount = couponResult.valid ? couponResult.discount : 0;
+    const taxableSubtotal = Math.max(0, subtotal - discount);
+    const gst = Math.round(taxableSubtotal * 0.18);
+    const total = taxableSubtotal + gst;
     const orderId = `PV-${Date.now()}`;
     const downloadToken = crypto.randomBytes(24).toString('hex');
 
@@ -136,6 +142,12 @@ export default async function handler(req, res) {
         qty: item.qty,
       })),
       subtotal,
+      discount,
+      coupon: couponResult.valid ? {
+        code: couponResult.code,
+        label: couponResult.label,
+        percent: couponResult.percent,
+      } : undefined,
       gst,
       total,
       status: 'created',
@@ -148,6 +160,12 @@ export default async function handler(req, res) {
       amount: rzpOrder.amount,
       currency: rzpOrder.currency,
       keyId: process.env.RAZORPAY_KEY_ID,
+      subtotal,
+      discount,
+      coupon: couponResult.valid ? {
+        code: couponResult.code,
+        label: couponResult.label,
+      } : null,
     });
   } catch (err) {
     console.error('Create order failed:', err.message);

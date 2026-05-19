@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Script from 'next/script';
 import { readSession } from '../lib/auth';
 import { productCategories, productCategoryLabels } from '../lib/starter-products.mjs';
+import { applyCouponToCart } from '../lib/coupons.mjs';
 
 const categoryOptions = [{ slug: 'all', label: 'All products' }, ...productCategories];
 
@@ -73,6 +74,7 @@ export default function Home({ initialUser = null }) {
   const [search, setSearch]         = useState('');
   const [sort, setSort]             = useState('featured');
   const [user, setUser]             = useState(initialUser);
+  const [couponCode, setCouponCode] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Load products from DB
@@ -98,6 +100,16 @@ export default function Home({ initialUser = null }) {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || products.length === 0) return;
+    const slug = new URLSearchParams(window.location.search).get('product');
+    const category = new URLSearchParams(window.location.search).get('category');
+    if (category && categoryOptions.some((item) => item.slug === category)) setFilter(category);
+    if (!slug) return;
+    const product = products.find((item) => item.slug === slug);
+    if (product) setSelectedProduct(product);
+  }, [products]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -159,8 +171,11 @@ export default function Home({ initialUser = null }) {
 
   const cartCount  = cart.reduce((s, i) => s + i.qty, 0);
   const subtotal   = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const gst        = Math.round(subtotal * 0.18);
-  const total      = subtotal + gst;
+  const couponResult = couponCode.trim() ? applyCouponToCart(couponCode, cart, products) : { valid: false, discount: 0, message: '' };
+  const discount   = couponResult.valid ? couponResult.discount : 0;
+  const taxableSubtotal = Math.max(0, subtotal - discount);
+  const gst        = Math.round(taxableSubtotal * 0.18);
+  const total      = taxableSubtotal + gst;
   const visibleProducts = products
     .filter((product) => {
       if (filter !== 'all' && product.category !== filter) return false;
@@ -215,6 +230,7 @@ export default function Home({ initialUser = null }) {
         body: JSON.stringify({
           items: cart.map(i => ({ productId: i._id, qty: i.qty })),
           customer,
+          couponCode,
         }),
       });
       const data = await res.json();
@@ -418,7 +434,7 @@ export default function Home({ initialUser = null }) {
         .pfinal{font-size:1.2rem;font-weight:700;color:var(--teal)}
         .pdiscount{font-size:.7rem;font-weight:600;color:var(--teal);background:rgba(26,107,107,.1);padding:2px 7px;border-radius:4px;margin-top:3px;display:inline-block}
         .pactions{display:flex;align-items:center;gap:7px}
-        .view-btn{background:#fff;border:1px solid var(--border);color:var(--ink);height:36px;border-radius:9px;padding:0 11px;cursor:pointer;font-weight:700;font-size:.78rem}
+        .view-btn{background:#fff;border:1px solid var(--border);color:var(--ink);height:36px;border-radius:9px;padding:0 11px;cursor:pointer;font-weight:700;font-size:.78rem;display:inline-flex;align-items:center;justify-content:center}
         .view-btn:hover{border-color:var(--teal);color:var(--teal)}
         .padd-btn{background:var(--teal);border:none;color:#fff;height:36px;border-radius:9px;cursor:pointer;font-size:.78rem;font-weight:850;padding:0 12px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;white-space:nowrap}
         .padd-btn:hover{background:var(--teal-dark);transform:translateY(-1px)}
@@ -480,6 +496,14 @@ export default function Home({ initialUser = null }) {
         .detail-list{margin:10px 0 16px;padding-left:18px;color:var(--text);font-size:.84rem;line-height:1.55}
         .detail-price{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px}
         .detail-price strong{color:var(--teal);font-size:1.35rem}
+        .detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+        .detail-actions a{border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-weight:800;font-size:.82rem;color:var(--teal);background:#fff}
+        .coupon-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin:0 0 1rem}
+        .coupon-row input{background:var(--cream);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:inherit}
+        .coupon-row button{border:none;background:var(--ink);color:var(--gold-light);border-radius:8px;padding:10px 12px;font-weight:800;cursor:pointer}
+        .coupon-msg{font-size:.78rem;margin:-.5rem 0 1rem;color:var(--muted)}
+        .coupon-msg.ok{color:var(--green)}
+        .verified-review{font-size:.72rem;color:var(--teal-dark);background:#edf8f4;border:1px solid rgba(26,107,107,.12);border-radius:7px;padding:7px 8px;margin-bottom:10px}
 
         /* Success */
         .success-wrap{text-align:center;padding:2.5rem 1.5rem}
@@ -514,6 +538,8 @@ export default function Home({ initialUser = null }) {
         <div className="logo"><em>Pixel</em>Vault ✦</div>
         <div className="nav-right">
           <button className={`nav-btn ${tab==='store'?'on':''}`} onClick={() => setTab('store')}>Store</button>
+          <Link className="auth-link" href="/blog">Guides</Link>
+          <Link className="auth-link" href="/sell">Sell</Link>
           {user && <Link className="auth-link" href="/dashboard">My Dashboard</Link>}
           {user ? (
             <div className="user-pill">
@@ -579,7 +605,7 @@ export default function Home({ initialUser = null }) {
                           <div className="offer-price">{formatProductPrice(heroProduct)}</div>
                         </div>
                         <div className="offer-actions">
-                          <button className="view-btn" onClick={() => setSelectedProduct(heroProduct)}>Details</button>
+                          <Link className="view-btn" href={`/products/${heroProduct.slug}`}>Details</Link>
                           <button className="padd-btn" onClick={() => isFreeProduct(heroProduct) ? downloadFreeProduct(heroProduct) : addToCart(heroProduct)}>
                             {isFreeProduct(heroProduct) ? 'Download free' : 'Add to cart'}
                           </button>
@@ -758,6 +784,11 @@ export default function Home({ initialUser = null }) {
                             <strong>Projects:</strong> {p.realWorldProjects.slice(0, 2).join(' / ')}
                           </div>
                         )}
+                        {p.verifiedReviewCount > 0 && (
+                          <div className="verified-review">
+                            {p.verifiedRatingAverage}/5 from {p.verifiedReviewCount} verified purchase reviews
+                          </div>
+                        )}
                         <div className="delivery-row">
                           <span className="delivery-chip">{isFreeProduct(p) ? 'Free download' : 'Instant download'}</span>
                           <span className="delivery-chip">Editable</span>
@@ -770,7 +801,7 @@ export default function Home({ initialUser = null }) {
                             {disc > 0 && <span className="pdiscount">Save {disc}%</span>}
                           </div>
                           <div className="pactions">
-                            <button className="view-btn" onClick={() => setSelectedProduct(p)}>Details</button>
+                            <Link className="view-btn" href={`/products/${p.slug}`}>Details</Link>
                             <button className="padd-btn" onClick={() => isFreeProduct(p) ? downloadFreeProduct(p) : addToCart(p)}>
                               {isFreeProduct(p) ? 'Get free' : 'Add'}
                             </button>
@@ -824,6 +855,7 @@ export default function Home({ initialUser = null }) {
             {cart.length > 0 && (
               <div className="c-foot">
                 <div className="ctr"><span style={{ color: 'var(--muted)' }}>Subtotal</span><span>{formatPrice(subtotal)}</span></div>
+                {discount > 0 && <div className="ctr"><span style={{ color: 'var(--muted)' }}>Discount</span><span style={{ color: 'var(--green)' }}>-{formatPrice(discount)}</span></div>}
                 <div className="ctr"><span style={{ color: 'var(--muted)' }}>GST (18%)</span><span>{formatPrice(gst)}</span></div>
                 <div className="ctr"><span style={{ color: 'var(--muted)' }}>Shipping</span><span style={{ color: 'var(--green)' }}>FREE</span></div>
                 <div className="ctr big"><span>Total</span><span style={{ color: 'var(--teal)' }}>{formatPrice(total)}</span></div>
@@ -852,9 +884,21 @@ export default function Home({ initialUser = null }) {
                 {cart.map(i => (
                   <div key={i._id} className="os-row"><span>{i.name} ×{i.qty}</span><span>{formatPrice(i.price * i.qty)}</span></div>
                 ))}
+                {discount > 0 && <div className="os-row"><span>Discount ({couponResult.code})</span><span>-{formatPrice(discount)}</span></div>}
                 <div className="os-row"><span>GST (18%)</span><span>{formatPrice(gst)}</span></div>
                 <div className="os-row total"><span>Total</span><span>{formatPrice(total)}</span></div>
               </div>
+              <div className="coupon-row">
+                <input
+                  placeholder="Coupon code"
+                  value={couponCode}
+                  onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                />
+                <button type="button" onClick={() => showToast(couponResult.message || 'Try PIXEL10, STUDENT15, or BUNDLE20')}>Apply</button>
+              </div>
+              {couponCode.trim() && (
+                <div className={`coupon-msg ${couponResult.valid ? 'ok' : ''}`}>{couponResult.message}</div>
+              )}
               <div className="fg">
                 <label className="fl">Full Name *</label>
                 <input className="fi" placeholder="Your name" value={customer.name} onChange={e => setCustomer(c => ({ ...c, name: e.target.value }))} />
@@ -901,12 +945,24 @@ export default function Home({ initialUser = null }) {
                   {selectedProduct.outcome && <div className="poutcome"><strong>Outcome:</strong> {selectedProduct.outcome}</div>}
                 </div>
               </div>
+              <div className="detail-actions">
+                <Link href={`/products/${selectedProduct.slug}`}>Open full product page</Link>
+                <a href={`/api/sample-download?slug=${encodeURIComponent(selectedProduct.slug)}`}>Download free sample</a>
+              </div>
               {Array.isArray(selectedProduct.features) && (
                 <>
                   <div className="detail-section-title">What is included</div>
                 <ul className="detail-list">
                   {selectedProduct.features.map(feature => <li key={feature}>{feature}</li>)}
                 </ul>
+                </>
+              )}
+              {Array.isArray(selectedProduct.fileList) && selectedProduct.fileList.length > 0 && (
+                <>
+                  <div className="detail-section-title">Files included</div>
+                  <ul className="detail-list">
+                    {selectedProduct.fileList.map(file => <li key={file}>{file}</li>)}
+                  </ul>
                 </>
               )}
               {Array.isArray(selectedProduct.curriculum) && selectedProduct.curriculum.length > 0 && (

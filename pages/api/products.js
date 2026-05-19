@@ -1,6 +1,26 @@
 import { connectDB } from '../../lib/mongoose';
-import { Product } from '../../lib/models';
+import { Product, Review } from '../../lib/models';
 import { getPublicStarterProducts } from '../../lib/starter-products.mjs';
+
+async function attachReviewStats(products) {
+  const slugs = products.map((product) => product.slug).filter(Boolean);
+  if (slugs.length === 0) return products;
+
+  const stats = await Review.aggregate([
+    { $match: { productSlug: { $in: slugs }, verified: true, status: 'approved' } },
+    { $group: { _id: '$productSlug', count: { $sum: 1 }, average: { $avg: '$rating' } } },
+  ]);
+
+  const statsBySlug = new Map(stats.map((item) => [item._id, {
+    verifiedReviewCount: item.count,
+    verifiedRatingAverage: Number(item.average.toFixed(1)),
+  }]));
+
+  return products.map((product) => ({
+    ...product,
+    ...(statsBySlug.get(product.slug) || {}),
+  }));
+}
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -19,7 +39,7 @@ export default async function handler(req, res) {
         const starterProducts = getPublicStarterProducts(category)
           .filter((product) => !existingSlugs.has(product.slug));
 
-        return res.status(200).json([...dbProducts, ...starterProducts]);
+        return res.status(200).json(await attachReviewStats([...dbProducts, ...starterProducts]));
       }
     } catch (err) {
       console.error('Falling back to starter products:', err.message);
@@ -38,7 +58,13 @@ export default async function handler(req, res) {
     }
 
     try {
-      const product = await Product.create(req.body);
+      const body = req.body || {};
+      const product = await Product.create({
+        ...body,
+        price: Number(body.price || 0),
+        comparePrice: Number(body.comparePrice || 0),
+        active: body.active !== false,
+      });
       return res.status(201).json(product);
     } catch (err) {
       return res.status(400).json({ error: err.message });

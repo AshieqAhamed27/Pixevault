@@ -38,6 +38,8 @@ export default async function handler(req, res) {
       status: order.status,
       total: order.total || 0,
       subtotal: order.subtotal || 0,
+      discount: order.discount || 0,
+      coupon: order.coupon || null,
       gst: order.gst || 0,
       currency: order.currency || 'INR',
       createdAt: order.createdAt,
@@ -48,8 +50,10 @@ export default async function handler(req, res) {
         name: item.name,
         price: item.price || 0,
         qty: item.qty || 1,
+        productHref: item.slug ? `/products/${item.slug}` : null,
         downloadHref: buildDownloadHref(order, item),
       })),
+      invoiceHref: `/api/account/invoice?orderId=${encodeURIComponent(order.orderId)}`,
     }));
 
     const paidOrders = safeOrders.filter((order) => order.status === 'paid');
@@ -62,6 +66,7 @@ export default async function handler(req, res) {
           name: item.name,
           slug: item.slug,
           href: item.downloadHref,
+          productHref: item.productHref,
         }))
     ));
 

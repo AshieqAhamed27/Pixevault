@@ -29,6 +29,8 @@ export default function CustomerDashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reviewDrafts, setReviewDrafts] = useState({});
+  const [reviewMessages, setReviewMessages] = useState({});
 
   useEffect(() => {
     async function loadDashboard() {
@@ -81,6 +83,37 @@ export default function CustomerDashboard() {
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/';
+  };
+
+  const updateReviewDraft = (key, patch) => {
+    setReviewDrafts((prev) => ({
+      ...prev,
+      [key]: { rating: 5, comment: '', ...(prev[key] || {}), ...patch },
+    }));
+  };
+
+  const submitReview = async (download) => {
+    const key = `${download.orderId}-${download.slug}`;
+    const draft = reviewDrafts[key] || { rating: 5, comment: '' };
+    setReviewMessages((prev) => ({ ...prev, [key]: 'Saving review...' }));
+
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: download.slug,
+          orderId: download.orderId,
+          rating: draft.rating,
+          comment: draft.comment,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to save review');
+      setReviewMessages((prev) => ({ ...prev, [key]: 'Review saved as a verified purchase review.' }));
+    } catch (err) {
+      setReviewMessages((prev) => ({ ...prev, [key]: err.message || 'Unable to save review' }));
+    }
   };
 
   if (!authChecked || loading) {
@@ -175,7 +208,31 @@ export default function CustomerDashboard() {
                     <span>{formatDate(download.purchasedAt)}</span>
                     <h3>{download.name}</h3>
                     <p>Order {download.orderId}</p>
-                    <a href={download.href}>Download file</a>
+                    <div className="download-actions">
+                      {download.productHref && <Link href={download.productHref}>Product page</Link>}
+                      <a href={download.href}>Download file</a>
+                    </div>
+                    <div className="review-box">
+                      <strong>Verified review</strong>
+                      <select
+                        value={(reviewDrafts[`${download.orderId}-${download.slug}`]?.rating) || 5}
+                        onChange={(event) => updateReviewDraft(`${download.orderId}-${download.slug}`, { rating: Number(event.target.value) })}
+                      >
+                        <option value={5}>5 - Excellent</option>
+                        <option value={4}>4 - Good</option>
+                        <option value={3}>3 - Okay</option>
+                        <option value={2}>2 - Needs work</option>
+                        <option value={1}>1 - Poor</option>
+                      </select>
+                      <textarea
+                        rows={3}
+                        placeholder="Share what helped or what needs improvement."
+                        value={(reviewDrafts[`${download.orderId}-${download.slug}`]?.comment) || ''}
+                        onChange={(event) => updateReviewDraft(`${download.orderId}-${download.slug}`, { comment: event.target.value })}
+                      />
+                      <button onClick={() => submitReview(download)}>Submit review</button>
+                      {reviewMessages[`${download.orderId}-${download.slug}`] && <p>{reviewMessages[`${download.orderId}-${download.slug}`]}</p>}
+                    </div>
                   </article>
                 ))}
               </div>
@@ -198,6 +255,8 @@ export default function CustomerDashboard() {
                     <div>
                       <strong>{order.orderId}</strong>
                       <span>{formatDate(order.createdAt)} · {order.items.map((item) => item.name).join(', ')}</span>
+                      <a className="invoice-link" href={order.invoiceHref}>Download invoice</a>
+                      <a className="invoice-link" href={`mailto:support@pixevault.vercel.app?subject=Support for ${order.orderId}`}>Support</a>
                     </div>
                     <div className="order-meta">
                       <span className={`status ${order.status}`}>{order.status}</span>
@@ -224,7 +283,7 @@ export default function CustomerDashboard() {
                   <p>{product.problem || product.description}</p>
                   <div>
                     <strong>{formatMoney(product.price)}</strong>
-                    <Link href="/">View</Link>
+                    <Link href={`/products/${product.slug}`}>View</Link>
                   </div>
                 </article>
               ))}
@@ -271,9 +330,16 @@ function DashboardStyles() {
       .download-card span,.rec-card span{display:block;color:#7a7065;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
       .download-card p,.rec-card p{color:#7a7065;font-size:.86rem;line-height:1.45}
       .download-card a,.rec-card a{display:inline-flex;margin-top:10px;background:#0d0d14;color:#e8d5a8;border-radius:7px;padding:9px 12px;font-weight:800;font-size:.84rem}
+      .download-actions{display:flex;gap:8px;flex-wrap:wrap}
+      .review-box{margin-top:12px;border-top:1px solid #e7ded3;padding-top:12px;display:grid;gap:8px}
+      .review-box strong{font-size:.82rem;color:#0d0d14}
+      .review-box select,.review-box textarea{width:100%;border:1px solid #d8d0c4;border-radius:8px;background:#fff;padding:9px;font-family:inherit;color:#171720}
+      .review-box button{border:none;background:#1a6b6b;color:#fff;border-radius:8px;padding:9px 12px;font-weight:800;cursor:pointer}
+      .review-box p{margin:0;color:#7a7065;font-size:.8rem}
       .orders{display:flex;flex-direction:column;gap:10px}
       .order-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
       .order-row span{display:block;color:#7a7065;font-size:.84rem;margin-top:4px}
+      .invoice-link{display:inline-flex;margin:8px 8px 0 0;color:#1a6b6b;font-weight:800;font-size:.82rem}
       .order-meta{text-align:right}
       .status{display:inline-block;border-radius:999px;padding:4px 9px;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;background:#efe9dc;color:#6b5a33;margin-bottom:6px}
       .status.paid{background:#e4f5ed;color:#1a7a4a}

@@ -30,8 +30,16 @@ const ProductSchema = new mongoose.Schema({
   color: String,
   badge: String,
   features: [String],
+  curriculum: [String],
+  realWorldProjects: [String],
+  includedProducts: [String],
+  fileList: [String],
+  preview: [String],
+  sampleUrl: String,
   downloadUrl: String,
   active: Boolean,
+  bundle: Boolean,
+  premium: Boolean,
 }, { timestamps: true });
 
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
