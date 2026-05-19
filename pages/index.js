@@ -4,6 +4,17 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Script from 'next/script';
 import { readSession } from '../lib/auth';
+import { productCategories, productCategoryLabels } from '../lib/starter-products.mjs';
+
+const categoryOptions = [{ slug: 'all', label: 'All products' }, ...productCategories];
+
+function formatCategory(category) {
+  return productCategoryLabels[category] || category;
+}
+
+function productMeta(product) {
+  return [product.categoryLabel || formatCategory(product.category), product.format].filter(Boolean).join(' / ');
+}
 
 export default function Home({ initialUser = null }) {
   const [products, setProducts]     = useState([]);
@@ -81,7 +92,17 @@ export default function Home({ initialUser = null }) {
     .filter((product) => {
       const term = search.trim().toLowerCase();
       if (!term) return true;
-      return [product.name, product.description, product.problem, product.outcome, product.audience, product.category]
+      return [
+        product.name,
+        product.description,
+        product.problem,
+        product.outcome,
+        product.audience,
+        product.category,
+        product.categoryLabel,
+        product.format,
+        formatCategory(product.category),
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term));
     })
@@ -154,7 +175,6 @@ export default function Home({ initialUser = null }) {
     }
   };
 
-  const categories = ['all', 'course', 'template', 'tool', 'licence'];
   const colorMap = {
     teal:  'linear-gradient(135deg,#e6f4f4,#b8e6e6)',
     amber: 'linear-gradient(135deg,#fef9ed,#fde8a8)',
@@ -168,7 +188,7 @@ export default function Home({ initialUser = null }) {
     <>
       <Head>
         <title>PixelVault — Digital Products</title>
-        <meta name="description" content="Premium digital products: courses, templates, tools and licences." />
+        <meta name="description" content="Practical digital products for sales, finance, marketing, support, local business, creators, and operations." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </Head>
@@ -227,14 +247,14 @@ export default function Home({ initialUser = null }) {
         .trust-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:-.4rem 0 1.4rem}
         .trust-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.78rem;color:var(--muted)}
         .trust-item strong{display:block;color:var(--ink);font-size:.86rem;margin-bottom:2px}
-        .collection-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 1.4rem}
+        .collection-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:0 0 1.4rem}
         .collection{background:var(--ink);color:#f5f2ec;border-radius:10px;padding:16px;border:1px solid rgba(200,169,110,.25)}
         .collection span{display:block;color:var(--gold);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;font-weight:800}
         .collection strong{display:block;font-size:1.05rem;margin-bottom:6px}
         .collection p{margin:0;color:#aaa;font-size:.82rem;line-height:1.45}
 
         .filters{display:flex;gap:7px;flex-wrap:wrap}
-        .filt{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:30px;cursor:pointer;font-size:.82rem;transition:all .2s;text-transform:capitalize}
+        .filt{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:30px;cursor:pointer;font-size:.82rem;transition:all .2s}
         .filt.on{background:var(--ink);border-color:var(--ink);color:#f5f2ec}
         .filt:hover:not(.on){border-color:var(--teal);color:var(--teal)}
 
@@ -392,7 +412,7 @@ export default function Home({ initialUser = null }) {
                 )}
               </div>
               <div className="hero-stats">
-                <div className="hero-stat"><strong>{products.length || '12'}+</strong><span>ready-to-use products</span></div>
+                <div className="hero-stat"><strong>{products.length || '36'}+</strong><span>ready-to-use products</span></div>
                 <div className="hero-stat"><strong>Instant</strong><span>email delivery after payment</span></div>
                 <div className="hero-stat"><strong>Razorpay</strong><span>UPI, cards, wallets</span></div>
               </div>
@@ -403,8 +423,8 @@ export default function Home({ initialUser = null }) {
             <div className="section-hd">
               <div className="section-lbl">Problem-solving products</div>
               <div className="filters">
-                {categories.map(c => (
-                  <button key={c} className={`filt ${filter === c ? 'on' : ''}`} onClick={() => setFilter(c)}>{c}</button>
+                {categoryOptions.map(c => (
+                  <button key={c.slug} className={`filt ${filter === c.slug ? 'on' : ''}`} onClick={() => setFilter(c.slug)}>{c.label}</button>
                 ))}
               </div>
             </div>
@@ -429,9 +449,10 @@ export default function Home({ initialUser = null }) {
               <div className="trust-item"><strong>Customer account</strong>Login speeds up future checkout.</div>
             </div>
             <div className="collection-row">
-              <div className="collection"><span>Revenue recovery</span><strong>Fix leaks before more ads</strong><p>Payments, checkout friction, reviews, and abandoned buyers.</p></div>
-              <div className="collection"><span>Creator operations</span><strong>Ship content and offers faster</strong><p>Prompts, content systems, launch kits, and product stores.</p></div>
-              <div className="collection"><span>Business systems</span><strong>Cleaner client and finance workflows</strong><p>Proposals, SOPs, onboarding, GST, and monthly tracking.</p></div>
+              <div className="collection"><span>Sales & checkout</span><strong>Recover revenue before buying more ads</strong><p>Failed payments, abandoned carts, conversion audits, and store launch systems.</p></div>
+              <div className="collection"><span>Finance & compliance</span><strong>Know where the money is going</strong><p>GST, settlements, subscription costs, and founder finance tracking.</p></div>
+              <div className="collection"><span>Marketing & creator</span><strong>Turn attention into useful buyers</strong><p>Content, SEO, email, LinkedIn, Reels, launches, and bundles.</p></div>
+              <div className="collection"><span>Support & operations</span><strong>Make the business easier to run</strong><p>Customer support, retention, SOPs, dashboards, onboarding, and no-show workflows.</p></div>
             </div>
 
             {loading ? (
@@ -460,7 +481,7 @@ export default function Home({ initialUser = null }) {
                         )}
                       </div>
                       <div className="pbody">
-                        <div className="pcat">{p.category}</div>
+                        <div className="pcat">{productMeta(p)}</div>
                         <div className="pname">{p.name}</div>
                         {p.audience && <div className="paudience">For {p.audience}</div>}
                         <div className="pdesc">{p.description}</div>
@@ -612,7 +633,7 @@ export default function Home({ initialUser = null }) {
                   )}
                 </div>
                 <div className="detail-copy">
-                  <div className="pcat">{selectedProduct.category}</div>
+                  <div className="pcat">{productMeta(selectedProduct)}</div>
                   <h2>{selectedProduct.name}</h2>
                   {selectedProduct.audience && <div className="paudience">For {selectedProduct.audience}</div>}
                   <p>{selectedProduct.longDesc || selectedProduct.description}</p>

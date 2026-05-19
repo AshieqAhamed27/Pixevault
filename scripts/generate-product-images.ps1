@@ -177,12 +177,16 @@ function Get-Initials {
 
 function Get-CategoryLabel {
   param([string]$Category)
-  switch ($Category) {
+  $label = switch ($Category) {
     "course" { return "COURSE" }
     "template" { return "TEMPLATE" }
     "tool" { return "TOOLKIT" }
-    default { return $Category.ToUpperInvariant() }
+    default { ($Category -replace "-", " ").ToUpperInvariant() }
   }
+  if ($label.Length -gt 14) {
+    return $label.Substring(0, 14).Trim()
+  }
+  return $label
 }
 
 $fontTitle = New-Object System.Drawing.Font("Segoe UI", 50, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
@@ -242,7 +246,7 @@ foreach ($product in $products) {
     $graphics.DrawString($brandText, $fontBrand, $white, 72, 54)
     $graphics.DrawString("Digital product cover", $fontSmall, $mutedWhite, 72, 85)
 
-    $categoryLabel = Get-CategoryLabel $product.category
+    $categoryLabel = Get-CategoryLabel $(if ($product.format) { $product.format } else { $product.category })
     $categoryRect = New-Object System.Drawing.RectangleF(950, 54, 174, 42)
     Fill-RoundRect -Graphics $graphics -Brush $accentBrush -Rect $categoryRect -Radius 18
     $formatCenter = New-Object System.Drawing.StringFormat

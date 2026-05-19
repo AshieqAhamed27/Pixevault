@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { productCategoryLabels } from '../lib/starter-products.mjs';
 
 function formatMoney(value) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`;
@@ -13,6 +14,12 @@ function formatDate(date) {
     month: 'short',
     year: 'numeric',
   });
+}
+
+function formatCategory(product) {
+  return [product.categoryLabel || productCategoryLabels[product.category] || product.category, product.format]
+    .filter(Boolean)
+    .join(' / ');
 }
 
 export default function CustomerDashboard() {
@@ -212,7 +219,7 @@ export default function CustomerDashboard() {
             <div className="rec-grid">
               {recommendations.map((product) => (
                 <article className="rec-card" key={product.slug}>
-                  <span>{product.category}</span>
+                  <span>{formatCategory(product)}</span>
                   <h3>{product.name}</h3>
                   <p>{product.problem || product.description}</p>
                   <div>

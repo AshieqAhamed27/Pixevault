@@ -21,6 +21,8 @@ const ProductSchema = new mongoose.Schema({
   problem: String,
   outcome: String,
   category: String,
+  categoryLabel: String,
+  format: String,
   price: Number,
   comparePrice: Number,
   image: String,
