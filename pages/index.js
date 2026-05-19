@@ -16,15 +16,27 @@ function productMeta(product) {
   return [product.categoryLabel || formatCategory(product.category), product.format].filter(Boolean).join(' / ');
 }
 
-function formatPrice(value) {
-  return `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+function formatPrice(value, { freeLabel = false } = {}) {
+  const numericValue = Number(value || 0);
+  if (freeLabel && numericValue <= 0) return 'Free';
+  return `Rs. ${numericValue.toLocaleString('en-IN')}`;
+}
+
+function isFreeProduct(product) {
+  return Number(product?.price || 0) <= 0;
+}
+
+function formatProductPrice(product) {
+  return formatPrice(product?.price, { freeLabel: true });
 }
 
 const categorySummaries = {
   'career-placement': 'Resume, LinkedIn, portfolio, interview, and placement bundles for freshers.',
   'student-projects': 'Mini projects, reports, viva PDFs, seminar assets, and beginner notes.',
+  'free-project-ideas': 'Free department-wise final-year project ideas for students choosing practical topics.',
   'code-templates': 'React, portfolio, landing page, website, and script templates for developers.',
   'design-assets': 'Canva kits, thumbnails, logos, UI kits, and creator design assets.',
+  'stock-market-investing': 'Educational stock-market, trading, investing, SIP, risk, and journal products.',
   'sales-checkout': 'Fix checkout leaks, abandoned carts, payment failures, and store launches.',
   'finance-compliance': 'Track GST, cash flow, subscriptions, settlements, and founder finance.',
   'client-services': 'Improve onboarding, proposals, delivery, retainers, and client communication.',
@@ -91,6 +103,11 @@ export default function Home({ initialUser = null }) {
   };
 
   const addToCart = (product) => {
+    if (isFreeProduct(product)) {
+      downloadFreeProduct(product);
+      return;
+    }
+
     setCart(prev => {
       const id = product._id || product.slug;
       const ex = prev.find(i => (i._id || i.slug) === id);
@@ -101,10 +118,11 @@ export default function Home({ initialUser = null }) {
   };
 
   const addManyToCart = (items) => {
-    if (!items.length) return;
+    const paidItems = items.filter(product => !isFreeProduct(product));
+    if (!paidItems.length) return;
     setCart(prev => {
       const next = [...prev];
-      items.forEach(product => {
+      paidItems.forEach(product => {
         const id = product._id || product.slug;
         const index = next.findIndex(i => (i._id || i.slug) === id);
         if (index >= 0) {
@@ -115,7 +133,13 @@ export default function Home({ initialUser = null }) {
       });
       return next;
     });
-    showToast(`${items.length} products added to cart`);
+    showToast(`${paidItems.length} products added to cart`);
+  };
+
+  const downloadFreeProduct = (product) => {
+    if (!product?.slug) return;
+    window.location.href = `/api/free-download?slug=${encodeURIComponent(product.slug)}`;
+    showToast(`${product.name} download started`);
   };
 
   const changeQty = (id, delta) => {
@@ -370,6 +394,7 @@ export default function Home({ initialUser = null }) {
         .pbadge-hot{background:var(--ink);color:var(--gold)}
         .pbadge-new{background:var(--teal);color:#fff}
         .pbadge-sale{background:var(--red);color:#fff}
+        .pbadge-free{background:#edf8f4;color:var(--green);border:1px solid rgba(26,122,74,.18)}
         .pbody{padding:1.1rem;display:flex;flex-direction:column;flex:1}
         .pcat{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
         .pname{font-size:1rem;font-weight:600;margin-bottom:5px;color:var(--ink);line-height:1.3}
@@ -512,9 +537,9 @@ export default function Home({ initialUser = null }) {
             <div className="hero-grid" />
             <div className="hero-wrap">
               <div>
-                  <div className="hero-tag">Career / Code / AI / Design / Business Templates</div>
+                  <div className="hero-tag">Career / Code / AI / Stock Market / Free Project Ideas</div>
                   <h1>Digital products students, creators, and freelancers can use <em>today</em>.</h1>
-                  <p>PixelVault now focuses on high-margin products with real demand: placement bundles, source-code packs, AI prompt libraries, website templates, design assets, and freelance business documents.</p>
+                  <p>PixelVault now focuses on high-margin products with real demand: placement bundles, source-code packs, AI prompt libraries, stock-market education kits, free project idea banks, website templates, and freelance business documents.</p>
                 <div className="hero-btns">
                   <button className="btn-gold" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}>Shop products</button>
                   <button className="btn-outline" onClick={() => document.getElementById('best-sellers')?.scrollIntoView({ behavior: 'smooth' })}>Best sellers</button>
@@ -522,7 +547,7 @@ export default function Home({ initialUser = null }) {
                 </div>
                 <div className="hero-stats">
                   <div className="hero-stat"><strong>{products.length || '36'}+</strong><span>problem-solving products</span></div>
-                  <div className="hero-stat"><strong>{productCategories.length} categories</strong><span>career, projects, code, AI, design</span></div>
+                  <div className="hero-stat"><strong>{productCategories.length} categories</strong><span>career, projects, stock market, code, AI</span></div>
                   <div className="hero-stat"><strong>Secure checkout</strong><span>Razorpay UPI, cards, wallets</span></div>
                 </div>
               </div>
@@ -549,11 +574,13 @@ export default function Home({ initialUser = null }) {
                       <div className="offer-price-row">
                         <div>
                           {heroProduct.comparePrice && <span className="porig">{formatPrice(heroProduct.comparePrice)}</span>}
-                          <div className="offer-price">{formatPrice(heroProduct.price)}</div>
+                          <div className="offer-price">{formatProductPrice(heroProduct)}</div>
                         </div>
                         <div className="offer-actions">
                           <button className="view-btn" onClick={() => setSelectedProduct(heroProduct)}>Details</button>
-                          <button className="padd-btn" onClick={() => addToCart(heroProduct)}>Add to cart</button>
+                          <button className="padd-btn" onClick={() => isFreeProduct(heroProduct) ? downloadFreeProduct(heroProduct) : addToCart(heroProduct)}>
+                            {isFreeProduct(heroProduct) ? 'Download free' : 'Add to cart'}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -565,7 +592,7 @@ export default function Home({ initialUser = null }) {
 
           <main className="main" id="shop">
             <div className="trust-row">
-              <div className="trust-item"><strong>Instant access</strong>Download links after successful payment.</div>
+              <div className="trust-item"><strong>Instant access</strong>Downloads after payment, plus free student packs.</div>
               <div className="trust-item"><strong>Real workflows</strong>Built around actual business problems.</div>
               <div className="trust-item"><strong>Editable assets</strong>Copy, customize, and launch quickly.</div>
               <div className="trust-item"><strong>Secure payments</strong>UPI, cards, wallets, and Razorpay checkout.</div>
@@ -593,7 +620,7 @@ export default function Home({ initialUser = null }) {
                           <span className="mini-copy">
                             <strong>{product.name}</strong>
                             <span>{product.outcome || product.description}</span>
-                            <span className="mini-price">{formatPrice(product.price)}</span>
+                            <span className="mini-price">{formatProductPrice(product)}</span>
                           </span>
                         </button>
                       ))}
@@ -612,7 +639,7 @@ export default function Home({ initialUser = null }) {
                         {starterStack.map(product => (
                           <div key={product._id || product.slug} className="bundle-line">
                             <span>{product.name}</span>
-                            <span>{formatPrice(product.price)}</span>
+                            <span>{formatProductPrice(product)}</span>
                           </div>
                         ))}
                       </div>
@@ -657,7 +684,7 @@ export default function Home({ initialUser = null }) {
               <div className="section-hd">
                 <div>
                   <div className="section-lbl">{filter === 'all' ? 'All digital products' : selectedCategory.label}</div>
-                  <div className="section-note">{filter === 'all' ? 'Browse career kits, student projects, source code, AI packs, design assets, and business templates.' : categorySummaries[filter]}</div>
+                  <div className="section-note">{filter === 'all' ? 'Browse career kits, free project ideas, stock-market education, source code, AI packs, design assets, and business templates.' : categorySummaries[filter]}</div>
                 </div>
                 <div className="filters">
                   {categoryOptions.map(c => (
@@ -668,7 +695,7 @@ export default function Home({ initialUser = null }) {
               <div className="store-tools">
                 <input
                   className="search-input"
-                  placeholder="Search checkout, GST, WhatsApp, support, proposals..."
+                  placeholder="Search trading, SIP, project ideas, resume, source code..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
@@ -695,7 +722,7 @@ export default function Home({ initialUser = null }) {
                   return (
                     <div key={p._id || p.slug} className="pcard">
                       {p.badge && (
-                        <div className={`pbadge pbadge-${p.badge.toLowerCase() === 'hot' ? 'hot' : p.badge.toLowerCase() === 'new' ? 'new' : 'sale'}`}>
+                        <div className={`pbadge pbadge-${p.badge.toLowerCase() === 'hot' ? 'hot' : p.badge.toLowerCase() === 'new' ? 'new' : p.badge.toLowerCase() === 'free' ? 'free' : 'sale'}`}>
                           {p.badge}
                         </div>
                       )}
@@ -726,7 +753,7 @@ export default function Home({ initialUser = null }) {
                           </ul>
                         )}
                         <div className="delivery-row">
-                          <span className="delivery-chip">Instant download</span>
+                          <span className="delivery-chip">{isFreeProduct(p) ? 'Free download' : 'Instant download'}</span>
                           <span className="delivery-chip">Editable</span>
                           <span className="delivery-chip">Commercial use</span>
                         </div>
@@ -739,12 +766,14 @@ export default function Home({ initialUser = null }) {
                         <div className="pfoot">
                           <div className="pprice">
                             {p.comparePrice && <span className="porig">{formatPrice(p.comparePrice)}</span>}
-                            <span className="pfinal">{formatPrice(p.price)}</span>
+                            <span className="pfinal">{formatProductPrice(p)}</span>
                             {disc > 0 && <span className="pdiscount">Save {disc}%</span>}
                           </div>
                           <div className="pactions">
                             <button className="view-btn" onClick={() => setSelectedProduct(p)}>Details</button>
-                            <button className="padd-btn" onClick={() => addToCart(p)}>Add</button>
+                            <button className="padd-btn" onClick={() => isFreeProduct(p) ? downloadFreeProduct(p) : addToCart(p)}>
+                              {isFreeProduct(p) ? 'Get free' : 'Add'}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -879,11 +908,20 @@ export default function Home({ initialUser = null }) {
               )}
               <div className="detail-price">
                 <div>
-                  <strong>{formatPrice(selectedProduct.price)}</strong>
+                  <strong>{formatProductPrice(selectedProduct)}</strong>
                   {selectedProduct.comparePrice && <span className="porig" style={{ marginLeft: 8 }}>{formatPrice(selectedProduct.comparePrice)}</span>}
                 </div>
-                <button className="confirm-btn" style={{ width: 'auto', padding: '12px 18px' }} onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); setCartOpen(true); }}>
-                  Add to cart
+                <button className="confirm-btn" style={{ width: 'auto', padding: '12px 18px' }} onClick={() => {
+                  if (isFreeProduct(selectedProduct)) {
+                    downloadFreeProduct(selectedProduct);
+                    setSelectedProduct(null);
+                    return;
+                  }
+                  addToCart(selectedProduct);
+                  setSelectedProduct(null);
+                  setCartOpen(true);
+                }}>
+                  {isFreeProduct(selectedProduct) ? 'Download free' : 'Add to cart'}
                 </button>
               </div>
             </div>
