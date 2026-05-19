@@ -1,5 +1,5 @@
 // pages/index.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Script from 'next/script';
@@ -75,6 +75,7 @@ export default function Home({ initialUser = null }) {
   const [sort, setSort]             = useState('featured');
   const [user, setUser]             = useState(initialUser);
   const [couponCode, setCouponCode] = useState('');
+  const [heroSlide, setHeroSlide]   = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Load products from DB
@@ -212,9 +213,38 @@ export default function Home({ initialUser = null }) {
   const starterStack = starterStackSlugs
     .map(slug => products.find(product => product.slug === slug))
     .filter(Boolean);
+  const heroOfferSlides = useMemo(() => {
+    const seen = new Set();
+    return [heroProduct, ...starterStack, ...featuredProducts, ...products]
+      .filter(product => product?.image)
+      .filter(product => {
+        const key = product.slug || product._id || product.image;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 5);
+  }, [heroProduct, starterStack, featuredProducts, products]);
   const starterTotal = starterStack.reduce((sum, product) => sum + product.price, 0);
   const starterCompare = starterStack.reduce((sum, product) => sum + (product.comparePrice || product.price), 0);
   const starterSavings = Math.max(0, starterCompare - starterTotal);
+
+  useEffect(() => {
+    setHeroSlide(0);
+  }, [heroProduct?.slug]);
+
+  useEffect(() => {
+    if (heroOfferSlides.length <= 1) return undefined;
+    const timer = setInterval(() => {
+      setHeroSlide(current => (current + 1) % heroOfferSlides.length);
+    }, 3200);
+    return () => clearInterval(timer);
+  }, [heroOfferSlides.length]);
+
+  const changeHeroSlide = (direction) => {
+    if (heroOfferSlides.length <= 1) return;
+    setHeroSlide(current => (current + direction + heroOfferSlides.length) % heroOfferSlides.length);
+  };
 
   const handlePay = async () => {
     if (!customer.name || !customer.email) {
@@ -341,7 +371,19 @@ export default function Home({ initialUser = null }) {
         .hero-offer{background:#f8f6f0;color:var(--ink);border:1px solid rgba(255,255,255,.18);border-radius:14px;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,.28)}
         .hero-offer-top{display:grid;grid-template-columns:180px 1fr;min-height:250px}
         .hero-offer-media{background:#151722;min-height:250px;position:relative;overflow:hidden}
-        .hero-offer-media img{width:100%;height:100%;object-fit:cover;display:block}
+        .hero-offer-track{height:100%;min-height:250px;display:flex;transition:transform .65s cubic-bezier(.22,.61,.36,1);will-change:transform}
+        .hero-offer-slide{position:relative;min-width:100%;height:250px;background:#151722;display:flex;align-items:center;justify-content:center}
+        .hero-offer-slide img{width:100%;height:100%;object-fit:cover;display:block}
+        .hero-slide-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#e8d5a8;font-weight:900;font-size:2.1rem}
+        .hero-slide-caption{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(13,13,20,.76);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:7px 8px;color:#fff;backdrop-filter:blur(7px)}
+        .hero-slide-caption span{display:block;font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:#e8d5a8;font-weight:850;margin-bottom:2px}
+        .hero-slide-caption strong{display:block;font-size:.72rem;line-height:1.2;color:#fff}
+        .hero-slide-btn{position:absolute;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:999px;background:rgba(13,13,20,.68);color:#fff;font-weight:900;cursor:pointer;z-index:2}
+        .hero-slide-btn:hover{background:var(--teal)}
+        .hero-slide-btn.prev{left:8px}.hero-slide-btn.next{right:8px}
+        .hero-slide-dots{position:absolute;top:10px;right:10px;display:flex;gap:5px;background:rgba(13,13,20,.45);border-radius:999px;padding:5px;z-index:2}
+        .hero-slide-dot{width:7px;height:7px;border:0;border-radius:999px;background:rgba(255,255,255,.42);padding:0;cursor:pointer}
+        .hero-slide-dot.on{width:18px;background:#e8d5a8}
         .hero-offer-copy{padding:18px;display:flex;flex-direction:column;gap:10px}
         .offer-kicker{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--teal);font-weight:850}
         .hero-offer h2{font-size:1.28rem;line-height:1.18;margin:0;color:var(--ink)}
@@ -523,7 +565,8 @@ export default function Home({ initialUser = null }) {
           .hero-wrap,.hero-stats,.hero-offer-top,.trust-row,.store-tools,.merch-grid,.rail-grid,.detail-grid{grid-template-columns:1fr}
           .hero{padding:2rem 1rem 1.2rem}
           .hero h1{font-size:2.1rem}
-          .hero-offer-media{height:210px;min-height:210px}
+          .hero-offer-media,.hero-offer-track{height:210px;min-height:210px}
+          .hero-offer-slide{height:210px}
           .main{padding:1.2rem 1rem}
           .category-grid{grid-template-columns:1fr}
           .pgrid{grid-template-columns:1fr}
@@ -584,10 +627,37 @@ export default function Home({ initialUser = null }) {
                 <aside className="hero-offer">
                   <div className="hero-offer-top">
                     <div className="hero-offer-media">
-                      {heroProduct.image ? (
-                        <img src={heroProduct.image} alt={`${heroProduct.name} product cover`} />
-                      ) : (
-                        <div className="pthumb-emoji">{heroProduct.emoji || 'PV'}</div>
+                      <div className="hero-offer-track" style={{ transform: `translateX(-${heroSlide * 100}%)` }}>
+                        {(heroOfferSlides.length ? heroOfferSlides : [heroProduct]).map((slide, index) => (
+                          <div className="hero-offer-slide" key={`${slide.slug || slide._id || slide.name}-${index}`}>
+                            {slide.image ? (
+                              <img src={slide.image} alt={`${slide.name} product cover`} />
+                            ) : (
+                              <div className="hero-slide-fallback">{slide.emoji || 'PV'}</div>
+                            )}
+                            <div className="hero-slide-caption">
+                              <span>{index === 0 ? 'Featured' : 'Included pick'}</span>
+                              <strong>{slide.name}</strong>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {heroOfferSlides.length > 1 && (
+                        <>
+                          <button className="hero-slide-btn prev" type="button" aria-label="Previous featured product image" onClick={() => changeHeroSlide(-1)}>&lt;</button>
+                          <button className="hero-slide-btn next" type="button" aria-label="Next featured product image" onClick={() => changeHeroSlide(1)}>&gt;</button>
+                          <div className="hero-slide-dots" aria-label="Featured product image slides">
+                            {heroOfferSlides.map((slide, index) => (
+                              <button
+                                key={`${slide.slug || slide._id || slide.name}-dot-${index}`}
+                                className={`hero-slide-dot ${heroSlide === index ? 'on' : ''}`}
+                                type="button"
+                                aria-label={`Show featured image ${index + 1}`}
+                                onClick={() => setHeroSlide(index)}
+                              />
+                            ))}
+                          </div>
+                        </>
                       )}
                     </div>
                     <div className="hero-offer-copy">
