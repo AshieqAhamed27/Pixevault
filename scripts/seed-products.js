@@ -32,8 +32,6 @@ const ProductSchema = new mongoose.Schema({
   features: [String],
   downloadUrl: String,
   active: Boolean,
-  rating: Number,
-  reviewCount: Number,
 }, { timestamps: true });
 
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);

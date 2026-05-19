@@ -30,8 +30,11 @@ export default async function handler(req, res) {
       getSeedProducts().map((product) => (
         Product.findOneAndUpdate(
           { slug: product.slug },
-          { $set: product },
-          { new: true, setDefaultsOnInsert: true, upsert: true },
+          {
+            $set: product,
+            $unset: { rating: '', reviewCount: '' },
+          },
+          { new: true, setDefaultsOnInsert: true, strict: false, upsert: true },
         )
       )),
     );

@@ -183,8 +183,7 @@ export default function Home({ initialUser = null }) {
     .sort((a, b) => {
       if (sort === 'price-low') return a.price - b.price;
       if (sort === 'price-high') return b.price - a.price;
-      if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
-      return (b.reviewCount || 0) - (a.reviewCount || 0);
+      return 0;
     });
   const categoryCounts = products.reduce((acc, product) => {
     acc[product.category] = (acc[product.category] || 0) + 1;
@@ -192,7 +191,7 @@ export default function Home({ initialUser = null }) {
   }, {});
   const selectedCategory = categoryOptions.find(c => c.slug === filter) || categoryOptions[0];
   const heroProduct = products.find(product => product.slug === heroProductSlug) || products[0];
-  const bestSellers = products
+  const featuredProducts = products
     .filter(product => product.badge === 'Hot')
     .slice(0, 4);
   const starterStack = starterStackSlugs
@@ -411,8 +410,6 @@ export default function Home({ initialUser = null }) {
         .poutcome{font-size:.72rem;color:var(--teal-dark);background:#edf8f4;border-radius:7px;padding:7px 8px;margin-bottom:10px;line-height:1.35}
         .project-strip{font-size:.72rem;color:#4c3f18;background:#fff6d8;border:1px solid rgba(200,169,110,.25);border-radius:7px;padding:7px 8px;margin-bottom:10px;line-height:1.35}
         .project-strip strong{color:#8a6d3e}
-        .prating{display:flex;align-items:center;gap:4px;margin-bottom:10px;font-size:.75rem;color:var(--muted)}
-        .stars{color:var(--gold);letter-spacing:1px}
         .delivery-row{display:flex;gap:6px;flex-wrap:wrap;margin:auto 0 12px}
         .delivery-chip{font-size:.66rem;font-weight:800;color:#4c4943;background:#f0ede6;border:1px solid rgba(216,208,196,.8);border-radius:999px;padding:4px 7px}
         .pfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid rgba(216,208,196,.65);padding-top:12px;margin-top:auto}
@@ -547,7 +544,7 @@ export default function Home({ initialUser = null }) {
                   <p>PixelVault now sells complete AI courses, affordable single products for quick buying, and higher-value bundles that join 3-4 products for career, projects, AI, stock-market learning, code templates, and creator workflows.</p>
                 <div className="hero-btns">
                   <button className="btn-gold" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}>Shop products</button>
-                  <button className="btn-outline" onClick={() => document.getElementById('best-sellers')?.scrollIntoView({ behavior: 'smooth' })}>Best sellers</button>
+                  <button className="btn-outline" onClick={() => document.getElementById('featured-products')?.scrollIntoView({ behavior: 'smooth' })}>Featured picks</button>
                   {user && <Link className="btn-outline" href="/dashboard">My dashboard</Link>}
                 </div>
                 <div className="hero-stats">
@@ -605,17 +602,17 @@ export default function Home({ initialUser = null }) {
 
             {!loading && products.length > 0 && (
               <>
-                <div className="merch-grid" id="best-sellers">
+                <div className="merch-grid" id="featured-products">
                   <section className="rail">
                     <div className="rail-head">
                       <div>
-                        <div className="rail-title">Best sellers for quick wins</div>
+                        <div className="rail-title">Featured products for quick wins</div>
                         <div className="rail-sub">Start with products that solve urgent money, launch, and customer problems.</div>
                       </div>
-                      <button className="filt" onClick={() => { setFilter('all'); setSort('rating'); }}>Top rated</button>
+                      <button className="filt" onClick={() => { setFilter('all'); setSort('featured'); }}>Featured</button>
                     </div>
                     <div className="rail-grid">
-                      {(bestSellers.length ? bestSellers : products.slice(0, 4)).map(product => (
+                      {(featuredProducts.length ? featuredProducts : products.slice(0, 4)).map(product => (
                         <button key={product._id || product.slug} className="mini-product" onClick={() => setSelectedProduct(product)}>
                           {product.image ? (
                             <img src={product.image} alt={`${product.name} product cover`} loading="lazy" />
@@ -706,7 +703,6 @@ export default function Home({ initialUser = null }) {
                 />
                 <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
                   <option value="featured">Featured</option>
-                  <option value="rating">Top rated</option>
                   <option value="price-low">Price: low to high</option>
                   <option value="price-high">Price: high to low</option>
                 </select>
@@ -767,12 +763,6 @@ export default function Home({ initialUser = null }) {
                           <span className="delivery-chip">Editable</span>
                           <span className="delivery-chip">Commercial use</span>
                         </div>
-                        {p.reviewCount > 0 && (
-                          <div className="prating">
-                            <span className="stars">Rating</span>
-                            <span>{p.rating} ({p.reviewCount})</span>
-                          </div>
-                        )}
                         <div className="pfoot">
                           <div className="pprice">
                             {p.comparePrice && <span className="porig">{formatPrice(p.comparePrice)}</span>}

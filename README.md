@@ -81,8 +81,6 @@ Edit `scripts/seed-products.js` — replace the sample products with your real o
   features: ['Feature 1', ...],
   downloadUrl: 'https://drive.google.com/...',  // Google Drive / S3 / any URL
   active: true,
-  rating: 4.8,
-  reviewCount: 124,
 }
 ```
 
