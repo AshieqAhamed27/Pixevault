@@ -34,6 +34,7 @@ const categorySummaries = {
   'career-placement': 'Resume, LinkedIn, portfolio, interview, and placement bundles for freshers.',
   'student-projects': 'Mini projects, reports, viva PDFs, seminar assets, and beginner notes.',
   'free-project-ideas': 'Free department-wise final-year project ideas for students choosing practical topics.',
+  'product-bundles': 'Higher-value bundles that combine 3-4 related products into one purchase.',
   'code-templates': 'React, portfolio, landing page, website, and script templates for developers.',
   'design-assets': 'Canva kits, thumbnails, logos, UI kits, and creator design assets.',
   'stock-market-investing': 'Educational stock-market, trading, investing, SIP, risk, and journal products.',
@@ -537,9 +538,9 @@ export default function Home({ initialUser = null }) {
             <div className="hero-grid" />
             <div className="hero-wrap">
               <div>
-                  <div className="hero-tag">Career / Code / AI / Stock Market / Free Project Ideas</div>
+                  <div className="hero-tag">Low-price singles / High-value bundles / Free student packs</div>
                   <h1>Digital products students, creators, and freelancers can use <em>today</em>.</h1>
-                  <p>PixelVault now focuses on high-margin products with real demand: placement bundles, source-code packs, AI prompt libraries, stock-market education kits, free project idea banks, website templates, and freelance business documents.</p>
+                  <p>PixelVault now sells affordable single products for quick buying, plus higher-value bundles that join 3-4 products for career, projects, AI, stock-market learning, code templates, and creator workflows.</p>
                 <div className="hero-btns">
                   <button className="btn-gold" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}>Shop products</button>
                   <button className="btn-outline" onClick={() => document.getElementById('best-sellers')?.scrollIntoView({ behavior: 'smooth' })}>Best sellers</button>
@@ -547,7 +548,7 @@ export default function Home({ initialUser = null }) {
                 </div>
                 <div className="hero-stats">
                   <div className="hero-stat"><strong>{products.length || '36'}+</strong><span>problem-solving products</span></div>
-                  <div className="hero-stat"><strong>{productCategories.length} categories</strong><span>career, projects, stock market, code, AI</span></div>
+                  <div className="hero-stat"><strong>{productCategories.length} categories</strong><span>singles, bundles, projects, stock market</span></div>
                   <div className="hero-stat"><strong>Secure checkout</strong><span>Razorpay UPI, cards, wallets</span></div>
                 </div>
               </div>
@@ -684,7 +685,7 @@ export default function Home({ initialUser = null }) {
               <div className="section-hd">
                 <div>
                   <div className="section-lbl">{filter === 'all' ? 'All digital products' : selectedCategory.label}</div>
-                  <div className="section-note">{filter === 'all' ? 'Browse career kits, free project ideas, stock-market education, source code, AI packs, design assets, and business templates.' : categorySummaries[filter]}</div>
+                  <div className="section-note">{filter === 'all' ? 'Browse low-price singles, high-value bundles, free project ideas, stock-market education, source code, AI packs, and design assets.' : categorySummaries[filter]}</div>
                 </div>
                 <div className="filters">
                   {categoryOptions.map(c => (
