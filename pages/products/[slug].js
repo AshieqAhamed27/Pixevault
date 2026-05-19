@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { connectDB } from '../../lib/mongoose';
@@ -20,6 +21,45 @@ function serialize(value) {
 
 function categoryName(product) {
   return product.categoryLabel || productCategoryLabels[product.category] || product.category;
+}
+
+function buildProductGallery(product, starterProducts, related) {
+  const companionCategories = {
+    'ai-courses': ['ai-automation', 'career-placement', 'creator-products'],
+    'student-projects': ['free-project-ideas', 'career-placement'],
+    'career-placement': ['student-projects', 'code-templates'],
+    'stock-market-investing': ['product-bundles'],
+    'creator-products': ['marketing-content', 'design-assets', 'ai-automation'],
+    'client-services': ['business-documents', 'finance-compliance'],
+  };
+
+  const companionSet = new Set([product.category, ...(companionCategories[product.category] || [])]);
+  const includedProducts = Array.isArray(product.includedProducts)
+    ? product.includedProducts
+        .map((slug) => starterProducts.find((item) => item.slug === slug))
+        .filter(Boolean)
+    : [];
+  const companionProducts = starterProducts
+    .filter((item) => item.slug !== product.slug && companionSet.has(item.category))
+    .slice(0, 6);
+
+  const seen = new Set();
+  return [product, ...includedProducts, ...related, ...companionProducts, ...starterProducts]
+    .filter((item) => item?.image)
+    .filter((item) => {
+      const key = `${item.slug}-${item.image}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 6)
+    .map((item) => ({
+      slug: item.slug,
+      name: item.name,
+      image: item.image,
+      emoji: item.emoji,
+      categoryLabel: item.categoryLabel || productCategoryLabels[item.category] || item.category,
+    }));
 }
 
 export async function getServerSideProps({ params }) {
@@ -49,6 +89,7 @@ export async function getServerSideProps({ params }) {
   const related = starterProducts
     .filter((item) => item.slug !== product.slug && item.category === product.category)
     .slice(0, 4);
+  const gallery = buildProductGallery(product, starterProducts, related);
 
   const average = reviews.length
     ? Number((reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1))
@@ -58,16 +99,37 @@ export async function getServerSideProps({ params }) {
     props: {
       product: serialize(product),
       related: serialize(related),
+      gallery: serialize(gallery),
       reviewSummary: serialize({ average, count: reviews.length, reviews }),
     },
   };
 }
 
-export default function ProductPage({ product, related, reviewSummary }) {
+export default function ProductPage({ product, related, gallery, reviewSummary }) {
   const isFree = Number(product.price || 0) <= 0;
   const productUrl = `https://pixevault.vercel.app/products/${product.slug}`;
   const title = `${product.name} | PixelVault`;
   const description = product.longDesc || product.description;
+  const heroSlides = useMemo(() => (
+    Array.isArray(gallery) && gallery.length > 0
+      ? gallery
+      : [{ slug: product.slug, name: product.name, image: product.image, emoji: product.emoji, categoryLabel: categoryName(product) }]
+  ), [gallery, product]);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    if (heroSlides.length <= 1) return undefined;
+    const timer = setInterval(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length);
+    }, 3600);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
+
+  function moveSlide(direction) {
+    setActiveSlide((current) => (
+      (current + direction + heroSlides.length) % heroSlides.length
+    ));
+  }
 
   return (
     <>
@@ -92,7 +154,38 @@ export default function ProductPage({ product, related, reviewSummary }) {
 
         <section className="hero">
           <div className="media">
-            {product.image ? <img src={product.image} alt={`${product.name} product cover`} /> : <strong>{product.emoji || 'PV'}</strong>}
+            <div className="slider-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
+              {heroSlides.map((slide, index) => (
+                <div className="slide" key={`${slide.slug}-${index}`}>
+                  {slide.image ? (
+                    <img src={slide.image} alt={`${slide.name} product cover`} />
+                  ) : (
+                    <strong className="slide-fallback">{slide.emoji || 'PV'}</strong>
+                  )}
+                  <div className="slide-caption">
+                    <span>{index === 0 ? 'Main product' : slide.categoryLabel}</span>
+                    <strong>{slide.name}</strong>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {heroSlides.length > 1 && (
+              <>
+                <button className="slide-btn prev" type="button" aria-label="Previous image" onClick={() => moveSlide(-1)}>&lt;</button>
+                <button className="slide-btn next" type="button" aria-label="Next image" onClick={() => moveSlide(1)}>&gt;</button>
+                <div className="slide-dots" aria-label="Product image slides">
+                  {heroSlides.map((slide, index) => (
+                    <button
+                      key={`${slide.slug}-dot-${index}`}
+                      className={`slide-dot ${activeSlide === index ? 'on' : ''}`}
+                      type="button"
+                      aria-label={`Show image ${index + 1}`}
+                      onClick={() => setActiveSlide(index)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
           <div className="copy">
             <Link href="/" className="crumb">Store / {categoryName(product)}</Link>
@@ -189,8 +282,19 @@ export default function ProductPage({ product, related, reviewSummary }) {
         .topnav div{display:flex;gap:14px;font-size:.88rem;color:#cfcbd8}
         .hero,.grid,.panel{max-width:1120px;margin:0 auto}
         .hero{display:grid;grid-template-columns:minmax(280px,430px) 1fr;gap:28px;padding:34px 20px 20px}
-        .media{background:#111;border-radius:12px;overflow:hidden;min-height:360px;display:flex;align-items:center;justify-content:center;color:#e8d5a8;font-size:3rem}
-        .media img{width:100%;height:100%;object-fit:cover;display:block}
+        .media{background:#111;border-radius:12px;overflow:hidden;min-height:360px;position:relative;color:#e8d5a8;font-size:3rem}
+        .slider-track{height:100%;min-height:360px;display:flex;transition:transform .7s cubic-bezier(.22,.61,.36,1);will-change:transform}
+        .slide{min-width:100%;position:relative;display:flex;align-items:center;justify-content:center;background:#111}
+        .slide img{width:100%;height:100%;object-fit:cover;display:block}
+        .slide-fallback{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:360px}
+        .slide-caption{position:absolute;left:16px;right:16px;bottom:16px;background:rgba(13,13,20,.78);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:11px 12px;color:#fff;backdrop-filter:blur(8px)}
+        .slide-caption span{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:#e8d5a8;font-weight:850;margin-bottom:3px}
+        .slide-caption strong{display:block;font-size:.92rem;line-height:1.25;color:#fff}
+        .slide-btn{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border:none;border-radius:999px;background:rgba(13,13,20,.72);color:#fff;font-weight:850;cursor:pointer}
+        .slide-btn:hover{background:#1a6b6b}.slide-btn.prev{left:12px}.slide-btn.next{right:12px}
+        .slide-dots{position:absolute;right:14px;top:14px;display:flex;gap:6px;background:rgba(13,13,20,.42);border-radius:999px;padding:6px}
+        .slide-dot{width:8px;height:8px;border-radius:999px;border:0;background:rgba(255,255,255,.45);padding:0;cursor:pointer}
+        .slide-dot.on{background:#e8d5a8;width:20px}
         .copy{display:flex;flex-direction:column;justify-content:center}
         .crumb,.eyebrow{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:#1a6b6b;font-weight:850}
         h1{font-size:clamp(2rem,4vw,3.8rem);line-height:1.03;margin:12px 0;color:#0d0d14}
@@ -210,7 +314,7 @@ export default function ProductPage({ product, related, reviewSummary }) {
         .reviews,.related{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
         .review,.related-card{border:1px solid #e4ddd4;background:#fbfaf7;border-radius:10px;padding:13px}
         .review p{margin:.4rem 0 0;color:#625b54;font-size:.9rem}.related-card{display:grid;gap:8px}.related-card img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:8px;background:#111}.related-card span{color:#1a6b6b;font-weight:850}
-        @media(max-width:820px){.hero,.grid{grid-template-columns:1fr}.media{min-height:260px}.price-row{align-items:flex-start;flex-direction:column}.side{position:static}}
+        @media(max-width:820px){.hero,.grid{grid-template-columns:1fr}.media,.slider-track,.slide-fallback{min-height:260px}.price-row{align-items:flex-start;flex-direction:column}.side{position:static}}
       `}</style>
     </>
   );
