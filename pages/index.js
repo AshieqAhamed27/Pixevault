@@ -21,22 +21,27 @@ function formatPrice(value) {
 }
 
 const categorySummaries = {
+  'career-placement': 'Resume, LinkedIn, portfolio, interview, and placement bundles for freshers.',
+  'student-projects': 'Mini projects, reports, viva PDFs, seminar assets, and beginner notes.',
+  'code-templates': 'React, portfolio, landing page, website, and script templates for developers.',
+  'design-assets': 'Canva kits, thumbnails, logos, UI kits, and creator design assets.',
   'sales-checkout': 'Fix checkout leaks, abandoned carts, payment failures, and store launches.',
   'finance-compliance': 'Track GST, cash flow, subscriptions, settlements, and founder finance.',
   'client-services': 'Improve onboarding, proposals, delivery, retainers, and client communication.',
   'marketing-content': 'Plan content, SEO, email, launches, and social campaigns that convert.',
-  'ai-automation': 'Use AI prompts and workflows to speed up research, ops, and customer work.',
+  'ai-automation': 'Prompt packs, Notion systems, and AI workflows for study and freelance work.',
   'customer-support': 'Reduce tickets, improve reviews, and retain customers with better support.',
   'local-business': 'Bring salons, clinics, coaches, and local teams into smoother digital systems.',
   'creator-products': 'Package knowledge into paid products, bundles, courses, and launch assets.',
+  'business-documents': 'Invoices, proposals, contracts, business plans, and client-ready documents.',
   'operations-team': 'Build SOPs, dashboards, hiring kits, and repeatable management systems.',
 };
 
-const heroProductSlug = 'digital-product-store-launch-kit';
+const heroProductSlug = 'complete-placement-success-pack';
 const starterStackSlugs = [
-  'creator-sales-starter-kit',
-  'refund-policy-trust-kit',
-  'abandoned-cart-winback-kit',
+  'freshers-ats-resume-bundle',
+  'linkedin-optimization-template-pack',
+  'technical-interview-question-bank',
 ];
 
 export default function Home({ initialUser = null }) {
@@ -507,9 +512,9 @@ export default function Home({ initialUser = null }) {
             <div className="hero-grid" />
             <div className="hero-wrap">
               <div>
-                <div className="hero-tag">Digital Products / Instant Delivery / Business Systems</div>
-                <h1>Buy ready-made systems for real <em>business problems</em>.</h1>
-                <p>PixelVault sells practical digital products for founders, creators, agencies, local businesses, and ecommerce teams who need outcomes today: more recovered revenue, cleaner finance, better content, faster support, and smoother operations.</p>
+                  <div className="hero-tag">Career / Code / AI / Design / Business Templates</div>
+                  <h1>Digital products students, creators, and freelancers can use <em>today</em>.</h1>
+                  <p>PixelVault now focuses on high-margin products with real demand: placement bundles, source-code packs, AI prompt libraries, website templates, design assets, and freelance business documents.</p>
                 <div className="hero-btns">
                   <button className="btn-gold" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}>Shop products</button>
                   <button className="btn-outline" onClick={() => document.getElementById('best-sellers')?.scrollIntoView({ behavior: 'smooth' })}>Best sellers</button>
@@ -517,7 +522,7 @@ export default function Home({ initialUser = null }) {
                 </div>
                 <div className="hero-stats">
                   <div className="hero-stat"><strong>{products.length || '36'}+</strong><span>problem-solving products</span></div>
-                  <div className="hero-stat"><strong>9 categories</strong><span>sales, finance, AI, support, ops</span></div>
+                  <div className="hero-stat"><strong>{productCategories.length} categories</strong><span>career, projects, code, AI, design</span></div>
                   <div className="hero-stat"><strong>Secure checkout</strong><span>Razorpay UPI, cards, wallets</span></div>
                 </div>
               </div>
@@ -533,7 +538,7 @@ export default function Home({ initialUser = null }) {
                       )}
                     </div>
                     <div className="hero-offer-copy">
-                      <div className="offer-kicker">Featured business kit</div>
+                      <div className="offer-kicker">Featured high-demand bundle</div>
                       <h2>{heroProduct.name}</h2>
                       <p>{heroProduct.description}</p>
                       <ul className="offer-list">
@@ -599,8 +604,8 @@ export default function Home({ initialUser = null }) {
                     <aside className="bundle-panel">
                       <div className="bundle-head">
                         <div>
-                          <div className="bundle-title">Creator commerce starter stack</div>
-                          <div className="bundle-sub">A practical bundle for turning digital products into a real buying flow.</div>
+                          <div className="bundle-title">Career starter stack</div>
+                          <div className="bundle-sub">A focused bundle for freshers who need resume, LinkedIn, and interview prep assets.</div>
                         </div>
                       </div>
                       <div className="bundle-lines">
@@ -652,7 +657,7 @@ export default function Home({ initialUser = null }) {
               <div className="section-hd">
                 <div>
                   <div className="section-lbl">{filter === 'all' ? 'All digital products' : selectedCategory.label}</div>
-                  <div className="section-note">{filter === 'all' ? 'Browse the full marketplace of templates, systems, scripts, trackers, and launch kits.' : categorySummaries[filter]}</div>
+                  <div className="section-note">{filter === 'all' ? 'Browse career kits, student projects, source code, AI packs, design assets, and business templates.' : categorySummaries[filter]}</div>
                 </div>
                 <div className="filters">
                   {categoryOptions.map(c => (

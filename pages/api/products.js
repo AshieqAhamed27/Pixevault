@@ -13,7 +13,14 @@ export default async function handler(req, res) {
       if (category !== 'all') filter.category = category;
       const products = await Product.find(filter).sort({ createdAt: -1 });
 
-      if (products.length > 0) return res.status(200).json(products);
+      if (products.length > 0) {
+        const dbProducts = products.map((product) => product.toObject());
+        const existingSlugs = new Set(dbProducts.map((product) => product.slug));
+        const starterProducts = getPublicStarterProducts(category)
+          .filter((product) => !existingSlugs.has(product.slug));
+
+        return res.status(200).json([...dbProducts, ...starterProducts]);
+      }
     } catch (err) {
       console.error('Falling back to starter products:', err.message);
     }

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import { connectDB } from '../../lib/mongoose';
 import { Order, Product } from '../../lib/models';
+import { getSeedProducts } from '../../lib/starter-products.mjs';
 
 const CHECKOUT_ENV = ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'MONGODB_URI'];
 
@@ -37,6 +38,35 @@ function findRequestedProduct(products, productRef) {
   ));
 }
 
+async function seedMissingStarterProducts(productRefs, foundProducts) {
+  const foundRefs = new Set(foundProducts.flatMap((product) => [
+    product.slug,
+    product._id.toString(),
+  ]));
+  const missingSlugs = productRefs.filter((ref) => (
+    !foundRefs.has(ref) && !mongoose.Types.ObjectId.isValid(ref)
+  ));
+
+  if (missingSlugs.length === 0) return foundProducts;
+
+  const starterBySlug = new Map(getSeedProducts().map((product) => [product.slug, product]));
+  const productsToSeed = missingSlugs
+    .map((slug) => starterBySlug.get(slug))
+    .filter(Boolean);
+
+  if (productsToSeed.length === 0) return foundProducts;
+
+  await Promise.all(productsToSeed.map((product) => (
+    Product.findOneAndUpdate(
+      { slug: product.slug },
+      { $set: product },
+      { new: true, setDefaultsOnInsert: true, upsert: true },
+    )
+  )));
+
+  return Product.find(buildProductQuery(productRefs));
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -58,7 +88,8 @@ export default async function handler(req, res) {
     await connectDB();
 
     const productRefs = items.map((item) => item.productId);
-    const dbProducts = await Product.find(buildProductQuery(productRefs));
+    let dbProducts = await Product.find(buildProductQuery(productRefs));
+    dbProducts = await seedMissingStarterProducts(productRefs, dbProducts);
 
     if (dbProducts.length !== items.length) {
       return res.status(400).json({
