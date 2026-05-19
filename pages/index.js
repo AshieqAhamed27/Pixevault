@@ -38,6 +38,7 @@ const categorySummaries = {
   'code-templates': 'React, portfolio, landing page, website, and script templates for developers.',
   'design-assets': 'Canva kits, thumbnails, logos, UI kits, and creator design assets.',
   'stock-market-investing': 'Educational stock-market, trading, investing, SIP, risk, and journal products.',
+  'ai-courses': 'Complete AI courses with curriculum, assignments, and real-world projects.',
   'sales-checkout': 'Fix checkout leaks, abandoned carts, payment failures, and store launches.',
   'finance-compliance': 'Track GST, cash flow, subscriptions, settlements, and founder finance.',
   'client-services': 'Improve onboarding, proposals, delivery, retainers, and client communication.',
@@ -408,6 +409,8 @@ export default function Home({ initialUser = null }) {
         .pfeat{font-size:.72rem;color:var(--muted);line-height:1.35;display:flex;gap:5px}
         .pfeat::before{content:"";width:5px;height:5px;background:var(--gold);border-radius:50%;margin-top:6px;flex-shrink:0}
         .poutcome{font-size:.72rem;color:var(--teal-dark);background:#edf8f4;border-radius:7px;padding:7px 8px;margin-bottom:10px;line-height:1.35}
+        .project-strip{font-size:.72rem;color:#4c3f18;background:#fff6d8;border:1px solid rgba(200,169,110,.25);border-radius:7px;padding:7px 8px;margin-bottom:10px;line-height:1.35}
+        .project-strip strong{color:#8a6d3e}
         .prating{display:flex;align-items:center;gap:4px;margin-bottom:10px;font-size:.75rem;color:var(--muted)}
         .stars{color:var(--gold);letter-spacing:1px}
         .delivery-row{display:flex;gap:6px;flex-wrap:wrap;margin:auto 0 12px}
@@ -476,6 +479,7 @@ export default function Home({ initialUser = null }) {
         .detail-image{width:100%;height:100%;object-fit:cover;display:block}
         .detail-copy h2{margin:0 0 7px;font-size:1.35rem}
         .detail-copy p{color:var(--muted);font-size:.88rem;line-height:1.55;margin:0 0 10px}
+        .detail-section-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--teal);font-weight:850;margin:14px 0 4px}
         .detail-list{margin:10px 0 16px;padding-left:18px;color:var(--text);font-size:.84rem;line-height:1.55}
         .detail-price{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px}
         .detail-price strong{color:var(--teal);font-size:1.35rem}
@@ -538,9 +542,9 @@ export default function Home({ initialUser = null }) {
             <div className="hero-grid" />
             <div className="hero-wrap">
               <div>
-                  <div className="hero-tag">Low-price singles / High-value bundles / Free student packs</div>
+                  <div className="hero-tag">AI courses / Low-price singles / High-value bundles</div>
                   <h1>Digital products students, creators, and freelancers can use <em>today</em>.</h1>
-                  <p>PixelVault now sells affordable single products for quick buying, plus higher-value bundles that join 3-4 products for career, projects, AI, stock-market learning, code templates, and creator workflows.</p>
+                  <p>PixelVault now sells complete AI courses, affordable single products for quick buying, and higher-value bundles that join 3-4 products for career, projects, AI, stock-market learning, code templates, and creator workflows.</p>
                 <div className="hero-btns">
                   <button className="btn-gold" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}>Shop products</button>
                   <button className="btn-outline" onClick={() => document.getElementById('best-sellers')?.scrollIntoView({ behavior: 'smooth' })}>Best sellers</button>
@@ -685,7 +689,7 @@ export default function Home({ initialUser = null }) {
               <div className="section-hd">
                 <div>
                   <div className="section-lbl">{filter === 'all' ? 'All digital products' : selectedCategory.label}</div>
-                  <div className="section-note">{filter === 'all' ? 'Browse low-price singles, high-value bundles, free project ideas, stock-market education, source code, AI packs, and design assets.' : categorySummaries[filter]}</div>
+                  <div className="section-note">{filter === 'all' ? 'Browse AI courses, low-price singles, high-value bundles, free project ideas, stock-market education, source code, AI packs, and design assets.' : categorySummaries[filter]}</div>
                 </div>
                 <div className="filters">
                   {categoryOptions.map(c => (
@@ -696,7 +700,7 @@ export default function Home({ initialUser = null }) {
               <div className="store-tools">
                 <input
                   className="search-input"
-                  placeholder="Search trading, SIP, project ideas, resume, source code..."
+                  placeholder="Search Claude, AI course, trading, project ideas, resume..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
@@ -752,6 +756,11 @@ export default function Home({ initialUser = null }) {
                               <li key={feature} className="pfeat">{feature}</li>
                             ))}
                           </ul>
+                        )}
+                        {Array.isArray(p.realWorldProjects) && p.realWorldProjects.length > 0 && (
+                          <div className="project-strip">
+                            <strong>Projects:</strong> {p.realWorldProjects.slice(0, 2).join(' / ')}
+                          </div>
                         )}
                         <div className="delivery-row">
                           <span className="delivery-chip">{isFreeProduct(p) ? 'Free download' : 'Instant download'}</span>
@@ -903,9 +912,28 @@ export default function Home({ initialUser = null }) {
                 </div>
               </div>
               {Array.isArray(selectedProduct.features) && (
+                <>
+                  <div className="detail-section-title">What is included</div>
                 <ul className="detail-list">
                   {selectedProduct.features.map(feature => <li key={feature}>{feature}</li>)}
                 </ul>
+                </>
+              )}
+              {Array.isArray(selectedProduct.curriculum) && selectedProduct.curriculum.length > 0 && (
+                <>
+                  <div className="detail-section-title">Course curriculum</div>
+                  <ul className="detail-list">
+                    {selectedProduct.curriculum.map(item => <li key={item}>{item}</li>)}
+                  </ul>
+                </>
+              )}
+              {Array.isArray(selectedProduct.realWorldProjects) && selectedProduct.realWorldProjects.length > 0 && (
+                <>
+                  <div className="detail-section-title">Real-world projects</div>
+                  <ul className="detail-list">
+                    {selectedProduct.realWorldProjects.map(project => <li key={project}>{project}</li>)}
+                  </ul>
+                </>
               )}
               <div className="detail-price">
                 <div>
