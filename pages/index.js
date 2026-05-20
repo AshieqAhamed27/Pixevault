@@ -81,6 +81,14 @@ export default function Home({ initialUser = null }) {
   const [leadForm, setLeadForm] = useState({ name: '', email: '', phone: '' });
   const [leadSubmitting, setLeadSubmitting] = useState(false);
   const [referralCode, setReferralCode] = useState('');
+  const [advisorForm, setAdvisorForm] = useState({
+    audience: 'student',
+    goal: 'placement',
+    budget: 'under199',
+    format: 'any',
+  });
+  const [advisorLoading, setAdvisorLoading] = useState(false);
+  const [advisorResults, setAdvisorResults] = useState(null);
 
   // Load products from DB
   useEffect(() => {
@@ -222,6 +230,31 @@ export default function Home({ initialUser = null }) {
       showToast(err.message || 'Unable to unlock free download');
     } finally {
       setLeadSubmitting(false);
+    }
+  };
+
+  const updateAdvisor = (patch) => {
+    setAdvisorForm(prev => ({ ...prev, ...patch }));
+  };
+
+  const runProductAdvisor = async (event) => {
+    event.preventDefault();
+    setAdvisorLoading(true);
+    try {
+      const res = await fetch('/api/product-advisor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(advisorForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to find recommendations');
+      setAdvisorResults(data);
+      if (data.primary?.category) setFilter(data.primary.category);
+      showToast('AI product finder picked the best matches');
+    } catch (err) {
+      showToast(err.message || 'Unable to find recommendations');
+    } finally {
+      setAdvisorLoading(false);
     }
   };
 
@@ -517,6 +550,35 @@ export default function Home({ initialUser = null }) {
         .money-card span{color:var(--teal);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:850}
         .money-card strong{font-size:1.05rem;color:var(--ink)}
         .money-card p{color:var(--muted);font-size:.82rem;line-height:1.5;margin:0}
+        .advisor-panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;margin:0 0 1.6rem}
+        .advisor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+        .advisor-head h2{font-size:1.25rem;margin:0;color:var(--ink)}
+        .advisor-head p{font-size:.84rem;color:var(--muted);line-height:1.55;max-width:620px;margin:5px 0 0}
+        .advisor-chip{background:#0d0d14;color:#e8d5a8;border-radius:999px;padding:7px 10px;font-size:.72rem;font-weight:850;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+        .advisor-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:10px;align-items:end}
+        .advisor-field label{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:850;margin-bottom:5px}
+        .advisor-field select{width:100%;border:1px solid var(--border);background:#fbfaf7;border-radius:8px;padding:10px;font:inherit;color:var(--text);outline:none}
+        .advisor-field select:focus{border-color:var(--teal);background:#fff}
+        .advisor-btn{border:0;background:var(--teal);color:#fff;border-radius:8px;padding:11px 15px;font-weight:850;cursor:pointer;height:41px;white-space:nowrap}
+        .advisor-btn:disabled{opacity:.6;cursor:not-allowed}
+        .advisor-results{display:grid;grid-template-columns:minmax(250px,.95fr) minmax(0,1fr);gap:14px;margin-top:16px;border-top:1px solid var(--border);padding-top:16px}
+        .advisor-primary,.advisor-list{background:#fbfaf7;border:1px solid #e6ded3;border-radius:10px;padding:13px}
+        .advisor-primary{display:grid;grid-template-columns:104px 1fr;gap:12px;align-items:start}
+        .advisor-primary img,.advisor-fallback{width:104px;height:104px;border-radius:8px;background:#111;color:#e8d5a8;display:flex;align-items:center;justify-content:center;font-weight:900;object-fit:cover}
+        .advisor-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--teal);font-weight:850;margin-bottom:5px}
+        .advisor-primary h3{font-size:1.05rem;line-height:1.25;margin:0 0 5px;color:var(--ink)}
+        .advisor-primary p{font-size:.8rem;color:var(--muted);line-height:1.45;margin:0 0 8px}
+        .advisor-reasons{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+        .advisor-reasons span{font-size:.68rem;color:#4c4943;background:#f0ede6;border:1px solid rgba(216,208,196,.8);border-radius:999px;padding:4px 7px}
+        .advisor-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+        .advisor-actions a,.advisor-actions button{border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:8px;padding:9px 11px;font-weight:850;font-size:.78rem;cursor:pointer}
+        .advisor-actions button{background:var(--teal);color:#fff;border-color:var(--teal)}
+        .advisor-list h3{font-size:.95rem;margin:0 0 9px;color:var(--ink)}
+        .advisor-mini{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-top:1px solid rgba(216,208,196,.65);padding:9px 0}
+        .advisor-mini:first-of-type{border-top:0;padding-top:0}
+        .advisor-mini strong{font-size:.84rem;color:var(--ink);line-height:1.25}
+        .advisor-mini span{display:block;font-size:.72rem;color:var(--muted);margin-top:3px}
+        .advisor-mini a{font-size:.76rem;color:var(--teal);font-weight:850}
 
         .filters{display:flex;gap:7px;flex-wrap:wrap}
         .filt{background:none;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:30px;cursor:pointer;font-size:.82rem;transition:all .2s}
@@ -643,9 +705,10 @@ export default function Home({ initialUser = null }) {
         @media(max-width:760px){
           nav{height:auto;align-items:flex-start;gap:10px;padding:12px;flex-direction:column}
           .nav-right{width:100%;flex-wrap:wrap}
-          .hero-wrap,.hero-stats,.hero-offer-top,.trust-row,.money-row,.store-tools,.merch-grid,.rail-grid,.detail-grid{grid-template-columns:1fr}
+          .hero-wrap,.hero-stats,.hero-offer-top,.trust-row,.money-row,.advisor-form,.advisor-results,.advisor-primary,.store-tools,.merch-grid,.rail-grid,.detail-grid{grid-template-columns:1fr}
           .hero{padding:2rem 1rem 1.2rem}
           .hero h1{font-size:2.1rem}
+          .advisor-head{flex-direction:column}
           .hero-offer-media,.hero-offer-track{height:260px;min-height:260px}
           .hero-offer-slide{height:260px}
           .main{padding:1.2rem 1rem}
@@ -694,6 +757,7 @@ export default function Home({ initialUser = null }) {
                   <h1>Digital products students, creators, and freelancers can use <em>today</em>.</h1>
                   <p>PixelVault now sells complete AI courses, affordable single products for quick buying, and higher-value bundles that join 3-4 products for career, projects, AI, stock-market learning, code templates, and creator workflows.</p>
                 <div className="hero-btns">
+                  <button className="btn-gold" onClick={() => document.getElementById('advisor')?.scrollIntoView({ behavior: 'smooth' })}>Find my product</button>
                   <button className="btn-gold" onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}>Shop products</button>
                   <button className="btn-outline" onClick={() => document.getElementById('featured-products')?.scrollIntoView({ behavior: 'smooth' })}>Featured picks</button>
                   {user && <Link className="btn-outline" href="/dashboard">My dashboard</Link>}
@@ -792,6 +856,113 @@ export default function Home({ initialUser = null }) {
                 <p>Logged-in users get a referral link and can earn commission for real paid conversions.</p>
               </Link>
             </div>
+
+            <section className="advisor-panel" id="advisor">
+              <div className="advisor-head">
+                <div>
+                  <div className="section-lbl">AI Product Finder</div>
+                  <p>Answer four quick questions and get a focused recommendation for the course, bundle, or single product that fits your need.</p>
+                </div>
+                <span className="advisor-chip">Smart buyer guide</span>
+              </div>
+              <form className="advisor-form" onSubmit={runProductAdvisor}>
+                <div className="advisor-field">
+                  <label>Who are you?</label>
+                  <select value={advisorForm.audience} onChange={e => updateAdvisor({ audience: e.target.value })}>
+                    <option value="student">College student</option>
+                    <option value="fresher">Fresher / job seeker</option>
+                    <option value="developer">Developer</option>
+                    <option value="freelancer">Freelancer</option>
+                    <option value="creator">Creator</option>
+                    <option value="business">Business owner</option>
+                    <option value="investor">Market learner</option>
+                  </select>
+                </div>
+                <div className="advisor-field">
+                  <label>Main goal</label>
+                  <select value={advisorForm.goal} onChange={e => updateAdvisor({ goal: e.target.value })}>
+                    <option value="placement">Get job / placement ready</option>
+                    <option value="final_year_project">Final-year project help</option>
+                    <option value="ai_mastery">Master AI tools</option>
+                    <option value="stock_market">Learn stock market</option>
+                    <option value="freelance">Start freelancing</option>
+                    <option value="creator_business">Sell digital products</option>
+                    <option value="coding_templates">Build code/templates</option>
+                    <option value="business_growth">Improve business growth</option>
+                  </select>
+                </div>
+                <div className="advisor-field">
+                  <label>Budget</label>
+                  <select value={advisorForm.budget} onChange={e => updateAdvisor({ budget: e.target.value })}>
+                    <option value="free">Free starter</option>
+                    <option value="under199">Under Rs. 199</option>
+                    <option value="under499">Under Rs. 499</option>
+                    <option value="bundle">Best bundle value</option>
+                    <option value="premium">Premium course/system</option>
+                  </select>
+                </div>
+                <div className="advisor-field">
+                  <label>Product type</label>
+                  <select value={advisorForm.format} onChange={e => updateAdvisor({ format: e.target.value })}>
+                    <option value="any">Any format</option>
+                    <option value="course">Course</option>
+                    <option value="template">Template / kit</option>
+                    <option value="source_code">Source code</option>
+                    <option value="guide">Guide / notes</option>
+                  </select>
+                </div>
+                <button className="advisor-btn" disabled={advisorLoading}>{advisorLoading ? 'Finding...' : 'Recommend'}</button>
+              </form>
+
+              {advisorResults?.primary && (
+                <div className="advisor-results">
+                  <article className="advisor-primary">
+                    {advisorResults.primary.image ? (
+                      <img src={advisorResults.primary.image} alt={`${advisorResults.primary.name} cover`} />
+                    ) : (
+                      <div className="advisor-fallback">{advisorResults.primary.emoji || 'PV'}</div>
+                    )}
+                    <div>
+                      <div className="advisor-label">Best match: {advisorResults.profile}</div>
+                      <h3>{advisorResults.primary.name}</h3>
+                      <p>{advisorResults.primary.outcome || advisorResults.primary.description}</p>
+                      <div className="advisor-reasons">
+                        {(advisorResults.primary.advisorReasons || []).map(reason => <span key={reason}>{reason}</span>)}
+                      </div>
+                      <strong className="pfinal">{formatProductPrice(advisorResults.primary)}</strong>
+                      <div className="advisor-actions">
+                        <Link href={`/products/${advisorResults.primary.slug}`}>Details</Link>
+                        <button type="button" onClick={() => isFreeProduct(advisorResults.primary) ? downloadFreeProduct(advisorResults.primary) : addToCart(advisorResults.primary)}>
+                          {isFreeProduct(advisorResults.primary) ? 'Get free' : 'Add to cart'}
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+
+                  <aside className="advisor-list">
+                    <h3>Other good matches</h3>
+                    {(advisorResults.recommendations || []).slice(1, 5).map(product => (
+                      <div className="advisor-mini" key={product.slug}>
+                        <div>
+                          <strong>{product.name}</strong>
+                          <span>{formatProductPrice(product)} / {(product.advisorReasons || [])[0]}</span>
+                        </div>
+                        <Link href={`/products/${product.slug}`}>View</Link>
+                      </div>
+                    ))}
+                    {advisorResults.bundlePick && advisorResults.bundlePick.slug !== advisorResults.primary.slug && (
+                      <div className="advisor-mini">
+                        <div>
+                          <strong>Bundle option: {advisorResults.bundlePick.name}</strong>
+                          <span>{formatProductPrice(advisorResults.bundlePick)} / higher value pack</span>
+                        </div>
+                        <Link href={`/bundles/${advisorResults.bundlePick.slug}`}>Bundle</Link>
+                      </div>
+                    )}
+                  </aside>
+                </div>
+              )}
+            </section>
 
             {!loading && products.length > 0 && (
               <>
