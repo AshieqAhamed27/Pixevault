@@ -2,6 +2,7 @@ import { connectDB } from '../../lib/mongoose';
 import { Product } from '../../lib/models';
 import { getPublicStarterProducts } from '../../lib/starter-products.mjs';
 import { getAdvisorRecommendations } from '../../lib/product-advisor.mjs';
+import { getProductValueContent } from '../../lib/product-intelligence.mjs';
 
 async function loadProducts() {
   const starterProducts = getPublicStarterProducts('all');
@@ -24,6 +25,7 @@ async function loadProducts() {
 
 function safeProduct(product) {
   if (!product) return null;
+  const valueContent = getProductValueContent(product);
   return {
     _id: product._id || product.slug,
     slug: product.slug,
@@ -50,6 +52,10 @@ function safeProduct(product) {
     premium: product.premium === true,
     advisorScore: product.advisorScore || 0,
     advisorReasons: product.advisorReasons || [],
+    valuePreview: valueContent.valueHighlights.slice(0, 2),
+    quickStartPreview: valueContent.quickStartPlan.slice(0, 2),
+    aiPromptPreview: valueContent.aiPrompts[0] || '',
+    buyerIntent: valueContent.buyerIntent,
   };
 }
 

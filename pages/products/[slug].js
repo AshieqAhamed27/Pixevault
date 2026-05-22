@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { connectDB } from '../../lib/mongoose';
 import { Product, Review } from '../../lib/models';
 import { getPublicStarterProducts, productCategoryLabels } from '../../lib/starter-products.mjs';
+import { getProductValueContent } from '../../lib/product-intelligence.mjs';
 
 function isMissing(value) {
   return !value || /xxxxx|your_|replace|example/i.test(value);
@@ -100,12 +101,13 @@ export async function getServerSideProps({ params }) {
       product: serialize(product),
       related: serialize(related),
       gallery: serialize(gallery),
+      valueContent: serialize(getProductValueContent(product)),
       reviewSummary: serialize({ average, count: reviews.length, reviews }),
     },
   };
 }
 
-export default function ProductPage({ product, related, gallery, reviewSummary }) {
+export default function ProductPage({ product, related, gallery, valueContent, reviewSummary }) {
   const isFree = Number(product.price || 0) <= 0;
   const productUrl = `https://pixevault.vercel.app/products/${product.slug}`;
   const title = `${product.name} | PixelVault`;
@@ -121,6 +123,14 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
   const [leadSubmitting, setLeadSubmitting] = useState(false);
   const [leadMessage, setLeadMessage] = useState('');
   const [referralCode, setReferralCode] = useState('');
+  const [coachForm, setCoachForm] = useState({
+    audience: 'student',
+    goal: product.category === 'ai-courses' ? 'learn_skill' : 'buy_first_product',
+    stage: 'beginner',
+    budget: isFree ? 'free' : product.bundle ? 'bundle' : 'low',
+  });
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachResult, setCoachResult] = useState(null);
 
   useEffect(() => {
     if (heroSlides.length <= 1) return undefined;
@@ -188,6 +198,34 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
       setLeadMessage(err.message || 'Unable to unlock free download right now.');
     } finally {
       setLeadSubmitting(false);
+    }
+  }
+
+  async function runProductCoach(event) {
+    event.preventDefault();
+    setCoachLoading(true);
+    setCoachResult(null);
+
+    try {
+      const res = await fetch('/api/product-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: product.slug, ...coachForm }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to score this product');
+      setCoachResult(data.coach);
+    } catch (err) {
+      setCoachResult({
+        fitScore: 0,
+        verdict: err.message || 'Unable to score this product right now',
+        reasons: ['Try again after a moment.'],
+        recommendedPath: [],
+        quickStartPlan: [],
+        aiPrompts: [],
+      });
+    } finally {
+      setCoachLoading(false);
     }
   }
 
@@ -284,9 +322,81 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
             <List title="Course curriculum" items={product.curriculum} />
             <List title="Real-world projects" items={product.realWorldProjects} />
             <List title="Preview notes" items={product.preview} />
+            <List title="Why this is valuable" items={valueContent.valueHighlights} />
+            <List title="7-day quick-start plan" items={valueContent.quickStartPlan} />
+            <List title="Practical use cases" items={valueContent.practicalUseCases} />
+            <List title="AI prompts to use with this product" items={valueContent.aiPrompts} />
+            <List title="Success checklist" items={valueContent.successChecklist} />
           </article>
 
           <aside className="panel side">
+            <p className="eyebrow">AI buying coach</p>
+            <h2>Should I buy this?</h2>
+            <p className="muted mini-copy">Get a fit score based on your audience, goal, skill level, and budget.</p>
+            <form className="coach-form" onSubmit={runProductCoach}>
+              <label>Buyer type
+                <select value={coachForm.audience} onChange={(event) => setCoachForm({ ...coachForm, audience: event.target.value })}>
+                  <option value="student">Student</option>
+                  <option value="fresher">Fresher</option>
+                  <option value="developer">Developer</option>
+                  <option value="freelancer">Freelancer</option>
+                  <option value="creator">Creator</option>
+                  <option value="business">Business owner</option>
+                  <option value="investor">Market learner</option>
+                </select>
+              </label>
+              <label>Goal
+                <select value={coachForm.goal} onChange={(event) => setCoachForm({ ...coachForm, goal: event.target.value })}>
+                  <option value="buy_first_product">Buy first useful product</option>
+                  <option value="complete_project">Complete a project</option>
+                  <option value="improve_income">Improve income or sales</option>
+                  <option value="learn_skill">Learn a skill</option>
+                  <option value="save_time">Save time with templates</option>
+                </select>
+              </label>
+              <label>Level
+                <select value={coachForm.stage} onChange={(event) => setCoachForm({ ...coachForm, stage: event.target.value })}>
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </label>
+              <label>Budget style
+                <select value={coachForm.budget} onChange={(event) => setCoachForm({ ...coachForm, budget: event.target.value })}>
+                  <option value="free">Free only</option>
+                  <option value="low">Low price single</option>
+                  <option value="bundle">Best bundle value</option>
+                  <option value="premium">Premium system</option>
+                </select>
+              </label>
+              <button type="submit" disabled={coachLoading}>{coachLoading ? 'Checking...' : 'Get AI fit score'}</button>
+            </form>
+            {coachResult && (
+              <div className="coach-result">
+                <div className="score-row">
+                  <strong>{coachResult.verdict}</strong>
+                  <span>{coachResult.fitScore}/100</span>
+                </div>
+                <div className="score-track"><span style={{ width: `${Math.max(0, Math.min(100, coachResult.fitScore || 0))}%` }} /></div>
+                <List title="Why it fits" items={coachResult.reasons} />
+                <List title="Recommended path" items={coachResult.recommendedPath} />
+                {coachResult.bundlePick && (
+                  <Link className="bundle-link" href={`/bundles/${coachResult.bundlePick.slug}`}>
+                    Compare with {coachResult.bundlePick.name}
+                  </Link>
+                )}
+              </div>
+            )}
+
+            <div className="side-divider" />
+            <p className="eyebrow">Buyer fit</p>
+            <ul>
+              <li><strong>Best for:</strong> {valueContent.bestFor}</li>
+              <li><strong>Not for:</strong> {valueContent.notFor}</li>
+              <li><strong>Buying tip:</strong> {valueContent.upgradeTip}</li>
+            </ul>
+
+            <div className="side-divider" />
             <p className="eyebrow">Delivery policy</p>
             <ul>
               <li>Digital product, no physical shipping.</li>
@@ -388,6 +498,20 @@ export default function ProductPage({ product, related, gallery, reviewSummary }
         .panel ul{margin:10px 0 0;padding-left:20px;line-height:1.65;color:#2c2926}.panel li{margin-bottom:5px}
         .info{background:#fbfaf7;border:1px solid #ebe4da;border-radius:9px;padding:12px;margin:10px 0}.info strong{display:block;margin-bottom:4px;color:#0d0d14}.info p{margin:0;color:#625b54}
         .side{height:max-content;position:sticky;top:82px}.muted{color:#7a7065}
+        .mini-copy{font-size:.84rem;margin:6px 0 12px}
+        .coach-form{display:grid;gap:9px;margin:13px 0 14px}
+        .coach-form label{display:grid;gap:5px;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#7a7065;font-weight:850}
+        .coach-form select{width:100%;border:1px solid #d8d0c4;border-radius:8px;background:#fbfaf7;color:#171720;padding:10px;font:inherit;text-transform:none;letter-spacing:0;outline:none}
+        .coach-form select:focus{border-color:#1a6b6b;background:#fff}
+        .coach-form button{border:0;background:#1a6b6b;color:#fff;border-radius:9px;padding:12px;font-weight:850;cursor:pointer}
+        .coach-form button:disabled{opacity:.6;cursor:not-allowed}
+        .coach-result{border-top:1px solid #d8d0c4;border-bottom:1px solid #d8d0c4;padding:13px 0;margin:8px 0 14px}
+        .score-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+        .score-row strong{font-size:.95rem;color:#0d0d14}.score-row span{font-weight:900;color:#1a6b6b}
+        .score-track{height:8px;background:#ebe4da;border-radius:999px;overflow:hidden}.score-track span{display:block;height:100%;background:#1a6b6b;border-radius:999px}
+        .coach-result .eyebrow{display:block;margin:13px 0 4px}.coach-result ul{font-size:.84rem;margin-top:5px}
+        .bundle-link{display:block;border:1px solid #d8d0c4;background:#fbfaf7;border-radius:8px;padding:10px 11px;font-size:.82rem;font-weight:850;color:#1a6b6b;margin-top:10px}
+        .side-divider{height:1px;background:#d8d0c4;margin:16px 0}
         .reviews,.related{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
         .review,.related-card{border:1px solid #e4ddd4;background:#fbfaf7;border-radius:10px;padding:13px}
         .review p{margin:.4rem 0 0;color:#625b54;font-size:.9rem}.related-card{display:grid;gap:8px}.related-card img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:8px;background:#111}.related-card span{color:#1a6b6b;font-weight:850}

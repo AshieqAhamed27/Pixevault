@@ -1,6 +1,7 @@
 import { connectDB } from '../../lib/mongoose';
 import { Product, Review } from '../../lib/models';
 import { getPublicStarterProducts } from '../../lib/starter-products.mjs';
+import { getProductValueContent } from '../../lib/product-intelligence.mjs';
 
 async function attachReviewStats(products) {
   const slugs = products.map((product) => product.slug).filter(Boolean);
@@ -22,6 +23,19 @@ async function attachReviewStats(products) {
   }));
 }
 
+function attachValuePreview(products) {
+  return products.map((product) => {
+    const valueContent = getProductValueContent(product);
+    return {
+      ...product,
+      valuePreview: valueContent.valueHighlights.slice(0, 2),
+      quickStartPreview: valueContent.quickStartPlan.slice(0, 2),
+      aiPromptPreview: valueContent.aiPrompts[0] || '',
+      buyerIntent: valueContent.buyerIntent,
+    };
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     const { category = 'all' } = req.query;
@@ -39,14 +53,15 @@ export default async function handler(req, res) {
         const starterProducts = getPublicStarterProducts(category)
           .filter((product) => !existingSlugs.has(product.slug));
 
-        return res.status(200).json(await attachReviewStats([...dbProducts, ...starterProducts]));
+        const mergedProducts = attachValuePreview([...dbProducts, ...starterProducts]);
+        return res.status(200).json(await attachReviewStats(mergedProducts));
       }
     } catch (err) {
       console.error('Falling back to starter products:', err.message);
     }
 
     res.setHeader('x-pixelvault-catalog', 'starter');
-    return res.status(200).json(getPublicStarterProducts(category));
+    return res.status(200).json(attachValuePreview(getPublicStarterProducts(category)));
   }
 
   await connectDB();

@@ -568,8 +568,14 @@ export default function Home({ initialUser = null }) {
         .advisor-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--teal);font-weight:850;margin-bottom:5px}
         .advisor-primary h3{font-size:1.05rem;line-height:1.25;margin:0 0 5px;color:var(--ink)}
         .advisor-primary p{font-size:.8rem;color:var(--muted);line-height:1.45;margin:0 0 8px}
+        .advisor-score{margin:8px 0 9px}
+        .advisor-score-row{display:flex;justify-content:space-between;gap:8px;font-size:.72rem;font-weight:850;color:var(--teal);margin-bottom:5px}
+        .advisor-score-track{height:7px;background:#ebe4da;border-radius:999px;overflow:hidden}
+        .advisor-score-track span{display:block;height:100%;background:var(--teal);border-radius:999px}
         .advisor-reasons{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
         .advisor-reasons span{font-size:.68rem;color:#4c4943;background:#f0ede6;border:1px solid rgba(216,208,196,.8);border-radius:999px;padding:4px 7px}
+        .advisor-path{margin:8px 0 0;padding-left:16px;color:var(--text);font-size:.76rem;line-height:1.45}
+        .advisor-path li{margin-bottom:3px}
         .advisor-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
         .advisor-actions a,.advisor-actions button{border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:8px;padding:9px 11px;font-weight:850;font-size:.78rem;cursor:pointer}
         .advisor-actions button{background:var(--teal);color:#fff;border-color:var(--teal)}
@@ -610,6 +616,9 @@ export default function Home({ initialUser = null }) {
         .poutcome{font-size:.72rem;color:var(--teal-dark);background:#edf8f4;border-radius:7px;padding:7px 8px;margin-bottom:10px;line-height:1.35}
         .project-strip{font-size:.72rem;color:#4c3f18;background:#fff6d8;border:1px solid rgba(200,169,110,.25);border-radius:7px;padding:7px 8px;margin-bottom:10px;line-height:1.35}
         .project-strip strong{color:#8a6d3e}
+        .value-preview{border-left:3px solid var(--teal);padding:7px 0 7px 9px;margin-bottom:10px;font-size:.72rem;color:#4c4943;line-height:1.38;background:#fbfaf7}
+        .value-preview strong,.ai-prompt-strip strong{color:var(--ink)}
+        .ai-prompt-strip{font-size:.7rem;color:#5f5570;background:#f5f0fb;border:1px solid rgba(95,85,112,.12);border-radius:7px;padding:7px 8px;margin-bottom:10px;line-height:1.35}
         .delivery-row{display:flex;gap:6px;flex-wrap:wrap;margin:auto 0 12px}
         .delivery-chip{font-size:.66rem;font-weight:800;color:#4c4943;background:#f0ede6;border:1px solid rgba(216,208,196,.8);border-radius:999px;padding:4px 7px}
         .pfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid rgba(216,208,196,.65);padding-top:12px;margin-top:auto}
@@ -926,9 +935,23 @@ export default function Home({ initialUser = null }) {
                       <div className="advisor-label">Best match: {advisorResults.profile}</div>
                       <h3>{advisorResults.primary.name}</h3>
                       <p>{advisorResults.primary.outcome || advisorResults.primary.description}</p>
+                      <div className="advisor-score">
+                        <div className="advisor-score-row">
+                          <span>AI fit score</span>
+                          <span>{Math.min(100, Math.max(0, Math.round(advisorResults.primary.advisorScore || 0)))}/100</span>
+                        </div>
+                        <div className="advisor-score-track">
+                          <span style={{ width: `${Math.min(100, Math.max(0, Math.round(advisorResults.primary.advisorScore || 0)))}%` }} />
+                        </div>
+                      </div>
                       <div className="advisor-reasons">
                         {(advisorResults.primary.advisorReasons || []).map(reason => <span key={reason}>{reason}</span>)}
                       </div>
+                      {Array.isArray(advisorResults.primary.quickStartPreview) && advisorResults.primary.quickStartPreview.length > 0 && (
+                        <ul className="advisor-path">
+                          {advisorResults.primary.quickStartPreview.map(item => <li key={item}>{item}</li>)}
+                        </ul>
+                      )}
                       <strong className="pfinal">{formatProductPrice(advisorResults.primary)}</strong>
                       <div className="advisor-actions">
                         <Link href={`/products/${advisorResults.primary.slug}`}>Details</Link>
@@ -1110,6 +1133,9 @@ export default function Home({ initialUser = null }) {
                           </div>
                         )}
                         {p.outcome && <div className="poutcome"><strong>Outcome:</strong> {p.outcome}</div>}
+                        {Array.isArray(p.valuePreview) && p.valuePreview.length > 0 && (
+                          <div className="value-preview"><strong>Value:</strong> {p.valuePreview[0]}</div>
+                        )}
                         {Array.isArray(p.features) && p.features.length > 0 && (
                           <ul className="pfeatures">
                             {p.features.slice(0, 3).map(feature => (
@@ -1121,6 +1147,9 @@ export default function Home({ initialUser = null }) {
                           <div className="project-strip">
                             <strong>Projects:</strong> {p.realWorldProjects.slice(0, 2).join(' / ')}
                           </div>
+                        )}
+                        {p.aiPromptPreview && (
+                          <div className="ai-prompt-strip"><strong>AI use:</strong> {p.aiPromptPreview}</div>
                         )}
                         {p.verifiedReviewCount > 0 && (
                           <div className="verified-review">
@@ -1314,6 +1343,9 @@ export default function Home({ initialUser = null }) {
                   <p>{selectedProduct.longDesc || selectedProduct.description}</p>
                   {selectedProduct.problem && <div className="psolve"><div className="psolve-k">Problem</div><div className="psolve-v">{selectedProduct.problem}</div></div>}
                   {selectedProduct.outcome && <div className="poutcome"><strong>Outcome:</strong> {selectedProduct.outcome}</div>}
+                  {Array.isArray(selectedProduct.valuePreview) && selectedProduct.valuePreview.length > 0 && (
+                    <div className="value-preview"><strong>Value:</strong> {selectedProduct.valuePreview[0]}</div>
+                  )}
                 </div>
               </div>
               <div className="detail-actions">
@@ -1332,8 +1364,22 @@ export default function Home({ initialUser = null }) {
                 <>
                   <div className="detail-section-title">Files included</div>
                   <ul className="detail-list">
-                    {selectedProduct.fileList.map(file => <li key={file}>{file}</li>)}
+                  {selectedProduct.fileList.map(file => <li key={file}>{file}</li>)}
                   </ul>
+                </>
+              )}
+              {Array.isArray(selectedProduct.quickStartPreview) && selectedProduct.quickStartPreview.length > 0 && (
+                <>
+                  <div className="detail-section-title">Quick-start plan</div>
+                  <ul className="detail-list">
+                    {selectedProduct.quickStartPreview.map(step => <li key={step}>{step}</li>)}
+                  </ul>
+                </>
+              )}
+              {selectedProduct.aiPromptPreview && (
+                <>
+                  <div className="detail-section-title">AI prompt starter</div>
+                  <div className="ai-prompt-strip">{selectedProduct.aiPromptPreview}</div>
                 </>
               )}
               {Array.isArray(selectedProduct.curriculum) && selectedProduct.curriculum.length > 0 && (
