@@ -35,6 +35,8 @@ const categorySummaries = {
   'career-placement': 'Resume, LinkedIn, portfolio, interview, and placement bundles for freshers.',
   'student-projects': 'Mini projects, reports, viva PDFs, seminar assets, and beginner notes.',
   'free-project-ideas': 'Free department-wise final-year project ideas for students choosing practical topics.',
+  'startup-ideas': 'Startup ideas, validation roadmaps, MVP planning, micro-SaaS, and launch playbooks.',
+  'hackathons': 'Hackathon idea banks, winning manuals, pitch kits, MVP plans, and demo checklists.',
   'product-bundles': 'Higher-value bundles that combine 3-4 related products into one purchase.',
   'code-templates': 'React, portfolio, landing page, website, and script templates for developers.',
   'design-assets': 'Canva kits, thumbnails, logos, UI kits, and creator design assets.',
@@ -885,6 +887,8 @@ export default function Home({ initialUser = null }) {
                     <option value="creator">Creator</option>
                     <option value="business">Business owner</option>
                     <option value="investor">Market learner</option>
+                    <option value="founder">Startup founder</option>
+                    <option value="hackathon">Hackathon team</option>
                   </select>
                 </div>
                 <div className="advisor-field">
@@ -892,6 +896,8 @@ export default function Home({ initialUser = null }) {
                   <select value={advisorForm.goal} onChange={e => updateAdvisor({ goal: e.target.value })}>
                     <option value="placement">Get job / placement ready</option>
                     <option value="final_year_project">Final-year project help</option>
+                    <option value="startup_ideas">Startup ideas / validation</option>
+                    <option value="hackathon_win">Hackathon ideas / winning plan</option>
                     <option value="ai_mastery">Master AI tools</option>
                     <option value="stock_market">Learn stock market</option>
                     <option value="freelance">Start freelancing</option>
@@ -1084,7 +1090,7 @@ export default function Home({ initialUser = null }) {
               <div className="store-tools">
                 <input
                   className="search-input"
-                  placeholder="Search Claude, AI course, trading, project ideas, resume..."
+                  placeholder="Search Claude, startup ideas, hackathon manual, trading, resume..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />

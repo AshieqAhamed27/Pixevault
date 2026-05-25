@@ -24,11 +24,20 @@ function categoryName(product) {
   return product.categoryLabel || productCategoryLabels[product.category] || product.category;
 }
 
+function defaultCoachGoal(product) {
+  if (product.category === 'ai-courses') return 'learn_skill';
+  if (product.category === 'startup-ideas') return 'validate_startup';
+  if (product.category === 'hackathons') return 'win_hackathon';
+  return 'buy_first_product';
+}
+
 function buildProductGallery(product, starterProducts, related) {
   const companionCategories = {
     'ai-courses': ['ai-automation', 'career-placement', 'creator-products'],
     'student-projects': ['free-project-ideas', 'career-placement'],
     'career-placement': ['student-projects', 'code-templates'],
+    'startup-ideas': ['hackathons', 'creator-products', 'ai-automation'],
+    'hackathons': ['startup-ideas', 'student-projects', 'code-templates'],
     'stock-market-investing': ['product-bundles'],
     'creator-products': ['marketing-content', 'design-assets', 'ai-automation'],
     'client-services': ['business-documents', 'finance-compliance'],
@@ -125,7 +134,7 @@ export default function ProductPage({ product, related, gallery, valueContent, r
   const [referralCode, setReferralCode] = useState('');
   const [coachForm, setCoachForm] = useState({
     audience: 'student',
-    goal: product.category === 'ai-courses' ? 'learn_skill' : 'buy_first_product',
+    goal: defaultCoachGoal(product),
     stage: 'beginner',
     budget: isFree ? 'free' : product.bundle ? 'bundle' : 'low',
   });
@@ -343,6 +352,8 @@ export default function ProductPage({ product, related, gallery, valueContent, r
                   <option value="creator">Creator</option>
                   <option value="business">Business owner</option>
                   <option value="investor">Market learner</option>
+                  <option value="founder">Startup founder</option>
+                  <option value="hackathon">Hackathon team</option>
                 </select>
               </label>
               <label>Goal
@@ -352,6 +363,8 @@ export default function ProductPage({ product, related, gallery, valueContent, r
                   <option value="improve_income">Improve income or sales</option>
                   <option value="learn_skill">Learn a skill</option>
                   <option value="save_time">Save time with templates</option>
+                  <option value="validate_startup">Validate startup idea</option>
+                  <option value="win_hackathon">Win a hackathon</option>
                 </select>
               </label>
               <label>Level
